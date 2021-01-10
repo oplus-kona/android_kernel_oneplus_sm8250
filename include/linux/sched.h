@@ -1733,6 +1733,7 @@ extern struct pid *cad_pid;
 #define PF_SWAPWRITE		0x00800000	/* Allowed to write to swap */
 #define PF_MEMSTALL		0x01000000	/* Stalled due to lack of memory */
 #define PF_UMH			0x02000000	/* I'm an Usermodehelper process */
+#define PF_PERF_CRITICAL	0x03000000	/* Thread is performance-critical */
 #ifdef CONFIG_SONY_SCHED
 #define PF_MIGRATE_ED_TASK      0x00004000      /* early detection task migration */
 #endif
