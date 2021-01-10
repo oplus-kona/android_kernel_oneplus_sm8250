@@ -1736,6 +1736,7 @@ extern struct pid *cad_pid;
 #ifdef CONFIG_SONY_SCHED
 #define PF_MIGRATE_ED_TASK      0x00004000      /* early detection task migration */
 #endif
+#define PF_PERF_CRITICAL	0x03000000	/* Thread is performance-critical */
 #define PF_NO_SETAFFINITY	0x04000000	/* Userland is not allowed to meddle with cpus_allowed */
 #define PF_MCE_EARLY		0x08000000      /* Early kill for mce process policy */
 #define PF_WAKE_UP_IDLE         0x10000000	/* TTWU on an idle CPU */
