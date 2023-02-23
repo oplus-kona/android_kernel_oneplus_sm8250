@@ -75,6 +75,7 @@ int oplus_dimlayer_bl_enable_v2_real = 0;
 bool oplus_skip_datadimming_sync = false;
 
 uint64_t serial_number_fir = 0x0;
+int oplus_skip_pcc_override = 0;
 
 extern int oplus_debug_max_brightness;
 int oplus_seed_backlight = 0;
@@ -3987,6 +3988,24 @@ static ssize_t oplus_display_get_fp_state(struct kobject *obj,
 		       fp_state.touch_state);
 }
 
+static ssize_t oplus_display_get_oplus_skip_pcc_override(struct kobject *obj,
+	struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", oplus_skip_pcc_override);
+}
+
+static ssize_t oplus_display_set_oplus_skip_pcc_override(struct kobject *obj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int value = 0;
+	sscanf(buf, "%d", &value);
+
+	value = !!value;
+	oplus_skip_pcc_override = value;
+
+	return count;
+}
+
 static struct kobject *oplus_display_kobj;
 
 static OPLUS_ATTR(hbm, S_IRUGO | S_IWUSR, oplus_display_get_hbm,
@@ -4064,6 +4083,8 @@ static OPLUS_ATTR(failsafe, S_IRUGO | S_IWUSR, NULL,
 		   oplus_display_set_failsafe);
 static OPLUS_ATTR(mipi_clk_rate_hz, S_IRUGO | S_IWUSR,
 		   oplus_display_get_mipi_clk_rate_hz, NULL);
+static OPLUS_ATTR(skip_pcc_override, S_IRUGO|S_IWUSR,
+                   oplus_display_get_oplus_skip_pcc_override, oplus_display_set_oplus_skip_pcc_override);
 #ifdef OPLUS_FEATURE_AOD_RAMLESS
 static OPLUS_ATTR(aod_area, S_IRUGO | S_IWUSR, oplus_display_get_aod_area,
 		   oplus_display_set_aod_area);
@@ -4115,7 +4136,7 @@ static struct attribute *oplus_display_attrs[] = {
 	&oplus_attr_max_brightness.attr, &oplus_attr_ccd_check.attr,
 	&oplus_attr_iris_rm_check.attr, &oplus_attr_panel_pwr.attr,
 	&oplus_attr_mca_state.attr, &oplus_attr_failsafe.attr,
-	&oplus_attr_mipi_clk_rate_hz.attr,
+	&oplus_attr_mipi_clk_rate_hz.attr, &oplus_attr_skip_pcc_override.attr,
 #ifdef OPLUS_FEATURE_AOD_RAMLESS
 	&oplus_attr_aod_area.attr, &oplus_attr_video.attr,
 #endif /* OPLUS_FEATURE_AOD_RAMLESS */
