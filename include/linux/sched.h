@@ -838,6 +838,7 @@ struct task_struct {
 	refcount_t			usage;
 	/* Per task flags (PF_*), defined further below: */
 	unsigned int			flags;
+	unsigned int			pc_flags;
 	unsigned int			ptrace;
 
 #ifdef CONFIG_SMP
@@ -1733,7 +1734,6 @@ extern struct pid *cad_pid;
 #define PF_SWAPWRITE		0x00800000	/* Allowed to write to swap */
 #define PF_MEMSTALL		0x01000000	/* Stalled due to lack of memory */
 #define PF_UMH			0x02000000	/* I'm an Usermodehelper process */
-#define PF_PERF_CRITICAL	0x03000000	/* Thread is performance-critical */
 #ifdef CONFIG_SONY_SCHED
 #define PF_MIGRATE_ED_TASK      0x00004000      /* early detection task migration */
 #endif
@@ -1747,6 +1747,11 @@ extern struct pid *cad_pid;
 #endif
 #define PF_FREEZER_SKIP		0x40000000	/* Freezer should not count it as freezable */
 #define PF_SUSPEND_TASK		0x80000000      /* This thread called freeze_processes() and should not be frozen */
+
+/* Kernel-enforced CPU-cluster affinity for performance-critical tasks. */
+#define PC_LITTLE_AFFINE	0x00000001
+#define PC_PERF_AFFINE		0x00000002
+#define PC_PRIME_AFFINE	0x00000004
 
 /*
  * Only the _current_ task can read/write to tsk->flags, but other
