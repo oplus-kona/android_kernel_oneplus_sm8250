@@ -321,7 +321,7 @@ enum {
 };
 
 #define MIN_LRU_BATCH		BITS_PER_LONG
-#define MAX_LRU_BATCH		(MIN_LRU_BATCH * 128)
+#define MAX_LRU_BATCH		(MIN_LRU_BATCH * 64)
 
 /* whether to keep historical stats from evicted generations */
 #ifdef CONFIG_LRU_GEN_STATS
@@ -339,6 +339,9 @@ enum {
  * Normally anon and file min_seq are in sync. But if swapping is constrained,
  * e.g., out of swap space, file min_seq is allowed to advance and leave anon
  * min_seq behind.
+ *
+ * The number of pages in each generation is eventually consistent and therefore
+ * can be transiently negative when reset_batch_size() is pending.
  */
 struct lru_gen_struct {
 	/* the aging increments the youngest generation number */
@@ -347,10 +350,10 @@ struct lru_gen_struct {
 	unsigned long min_seq[ANON_AND_FILE];
 	/* the birth time of each generation in jiffies */
 	unsigned long timestamps[MAX_NR_GENS];
-	/* the multi-gen LRU lists */
+	/* the multi-gen LRU lists, lazily sorted on eviction */
 	struct list_head lists[MAX_NR_GENS][ANON_AND_FILE][MAX_NR_ZONES];
-	/* the sizes of the above lists */
-	unsigned long nr_pages[MAX_NR_GENS][ANON_AND_FILE][MAX_NR_ZONES];
+	/* the multi-gen LRU sizes, eventually consistent */
+	long nr_pages[MAX_NR_GENS][ANON_AND_FILE][MAX_NR_ZONES];
 	/* the exponential moving average of refaulted */
 	unsigned long avg_refaulted[ANON_AND_FILE][MAX_NR_TIERS];
 	/* the exponential moving average of evicted+protected */
@@ -365,17 +368,14 @@ struct lru_gen_struct {
 };
 
 enum {
-	MM_PTE_TOTAL,	/* total leaf entries */
-	MM_PTE_OLD,	/* old leaf entries */
-	MM_PTE_YOUNG,	/* young leaf entries */
-	MM_PMD_TOTAL,	/* total non-leaf entries */
-	MM_PMD_FOUND,	/* non-leaf entries found in Bloom filters */
-	MM_PMD_ADDED,	/* non-leaf entries added to Bloom filters */
+	MM_LEAF_TOTAL,		/* total leaf entries */
+	MM_LEAF_OLD,		/* old leaf entries */
+	MM_LEAF_YOUNG,		/* young leaf entries */
+	MM_NONLEAF_TOTAL,	/* total non-leaf entries */
+	MM_NONLEAF_FOUND,	/* non-leaf entries found in Bloom filters */
+	MM_NONLEAF_ADDED,	/* non-leaf entries added to Bloom filters */
 	NR_MM_STATS
 };
-
-/* mnemonic codes for the mm stats above */
-#define MM_STAT_CODES		"toydfa"
 
 /* double-buffering Bloom filters */
 #define NR_BLOOM_FILTERS	2
@@ -404,8 +404,6 @@ struct lru_gen_mm_walk {
 	unsigned long max_seq;
 	/* the next address within an mm to scan */
 	unsigned long next_addr;
-	/* to batch page table entries */
-	unsigned long bitmap[BITS_TO_LONGS(MIN_LRU_BATCH)];
 	/* to batch promoted pages */
 	int nr_pages[MAX_NR_GENS][ANON_AND_FILE][MAX_NR_ZONES];
 	/* to batch the mm stats */
@@ -413,7 +411,7 @@ struct lru_gen_mm_walk {
 	/* total batched items */
 	int batched;
 	bool can_swap;
-	bool full_scan;
+	bool force_scan;
 };
 
 void lru_gen_init_lruvec(struct lruvec *lruvec);
@@ -718,7 +716,7 @@ struct zone {
 #if defined CONFIG_COMPACTION || defined CONFIG_CMA
 	/* pfn where compaction free scanner should start */
 	unsigned long		compact_cached_free_pfn;
-	/* pfn where compaction migration scanner should start */
+	/* pfn where async and sync compaction migration scanner should start */
 	unsigned long		compact_cached_migrate_pfn[ASYNC_AND_SYNC];
 	unsigned long		compact_init_migrate_pfn;
 	unsigned long		compact_init_free_pfn;
@@ -915,6 +913,9 @@ typedef struct pglist_data {
 	enum zone_type kswapd_classzone_idx;
 
 	int kswapd_failures;		/* Number of 'reclaimed == 0' runs */
+
+	wait_queue_head_t kshrinkd_wait;
+	struct task_struct *kshrinkd[MAX_KSWAPD_THREADS];
 
 #ifdef CONFIG_COMPACTION
 	int kcompactd_max_order;
