@@ -784,7 +784,6 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	}
 
 	reinit_completion(&uvc->unbind_ok);
-	uvc->wait_for_close = false;
 	return 0;
 
 error:
@@ -925,8 +924,8 @@ static void uvc_unbind(struct usb_configuration *c, struct usb_function *f)
 	video_unregister_device(&uvc->vdev);
 	v4l2_device_unregister(&uvc->v4l2_dev);
 
-	if (uvc->wait_for_close)
-		wait_for_completion(&uvc->unbind_ok);
+	/* Wait for all V4L2 references before freeing UVC resources. */
+	wait_for_completion(&uvc->unbind_ok);
 
 	usb_ep_free_request(cdev->gadget->ep0, uvc->control_req);
 	kfree(uvc->control_buf);
