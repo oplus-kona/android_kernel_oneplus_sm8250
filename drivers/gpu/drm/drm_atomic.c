@@ -32,6 +32,7 @@
 #include <drm/drm_print.h>
 #include <drm/drm_writeback.h>
 #include <linux/sync_file.h>
+#include <linux/cpu_input_boost.h>
 
 #include "drm_crtc_internal.h"
 #include "drm_internal.h"
@@ -2718,6 +2719,14 @@ int drm_mode_atomic_ioctl(struct drm_device *dev,
 	if ((arg->flags & DRM_MODE_ATOMIC_TEST_ONLY) &&
 			(arg->flags & DRM_MODE_PAGE_FLIP_EVENT))
 		return -EINVAL;
+
+#ifdef CONFIG_CPU_INPUT_BOOST
+	/* Boost CPU when committing a new frame only if user touched within 3s */
+	if (!(arg->flags & DRM_MODE_ATOMIC_TEST_ONLY) &&
+	    time_before(jiffies, last_input_time + msecs_to_jiffies(3000))) {
+		cpu_input_boost_kick();
+	}
+#endif
 
 	drm_modeset_acquire_init(&ctx, DRM_MODESET_ACQUIRE_INTERRUPTIBLE);
 
