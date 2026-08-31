@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Author: Chad Froebel <chadfroebel@gmail.com>
+ * Port to SM8250: engstk <eng.stk@sapo.pt> / HELLBOY017
+ */
+
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
+#include <linux/fastchg.h>
+#include <linux/string.h>
+#include <linux/module.h>
+
+int force_fast_charge = 0;
+
+static int __init get_fastcharge_opt(char *ffc)
+{
+	if (strcmp(ffc, "0") == 0)
+		force_fast_charge = 0;
+	else if (strcmp(ffc, "1") == 0)
+		force_fast_charge = 1;
+	else
+		force_fast_charge = 0;
+	return 1;
+}
+
+__setup("ffc=", get_fastcharge_opt);
+
+static ssize_t force_fast_charge_show(struct kobject *kobj,
+				      struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%d\n", force_fast_charge);
+}
+
+static ssize_t force_fast_charge_store(struct kobject *kobj,
+				       struct kobj_attribute *attr,
+				       const char *buf, size_t count)
+{
+	if (sscanf(buf, "%d", &force_fast_charge) != 1)
+		return -EINVAL;
+
+	if (force_fast_charge < 0 || force_fast_charge > 1)
+		force_fast_charge = 0;
+
+	return count;
+}
+
+static struct kobj_attribute force_fast_charge_attribute =
+	__ATTR(force_fast_charge, 0664, force_fast_charge_show, force_fast_charge_store);
+
+static struct attribute *force_fast_charge_attrs[] = {
+	&force_fast_charge_attribute.attr,
+	NULL,
+};
+
+static struct attribute_group force_fast_charge_attr_group = {
+	.attrs = force_fast_charge_attrs,
+};
+
+static struct kobject *force_fast_charge_kobj;
+
+int force_fast_charge_init(void)
+{
+	int ret;
+
+	force_fast_charge_kobj = kobject_create_and_add("fast_charge", kernel_kobj);
+	if (!force_fast_charge_kobj)
+		return -ENOMEM;
+
+	ret = sysfs_create_group(force_fast_charge_kobj, &force_fast_charge_attr_group);
+	if (ret)
+		kobject_put(force_fast_charge_kobj);
+
+	return ret;
+}
+
+void force_fast_charge_exit(void)
+{
+	kobject_put(force_fast_charge_kobj);
+}
+
+module_init(force_fast_charge_init);
+module_exit(force_fast_charge_exit);
+MODULE_DESCRIPTION("USB 2.0 Force Fast Charge Driver");
+MODULE_LICENSE("GPL v2");
