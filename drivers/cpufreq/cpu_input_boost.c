@@ -86,11 +86,7 @@ module_param(wake_boost_duration, short, 0644);
 
 module_param(dynamic_stune_boost, short, 0644);
 
-module_param(dynamic_sched_boost, bool, 0644);
-
 unsigned long last_input_time;
-
-static int boost_slot;
 
 static void input_unboost_worker(struct work_struct *work);
 static void max_unboost_worker(struct work_struct *work);
@@ -110,6 +106,19 @@ static const struct cpumask prime_mask = { { 0x80 } };  /* CPU 7:    Prime */
 #define cpu_lp_mask (&lp_mask)
 #define cpu_perf_mask (&perf_mask)
 #define cpu_prime_mask (&prime_mask)
+
+#ifndef kthread_run_perf_critical
+#define kthread_run_perf_critical(perfmask, threadfn, data, namefmt, ...)  \
+({                                                                         \
+	struct task_struct *__k                                                \
+		= kthread_create(threadfn, data, namefmt, ## __VA_ARGS__);         \
+	if (!IS_ERR(__k)) {                                                    \
+		set_cpus_allowed_ptr(__k, perfmask);                               \
+		wake_up_process(__k);                                              \
+	}                                                                      \
+	__k;                                                                   \
+})
+#endif
 
 static unsigned int get_input_boost_freq(struct cpufreq_policy *policy)
 {
@@ -319,7 +328,9 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long action,
 	 * Boost to policy->max if the boost frequency is higher. When
 	 * unboosting, set policy->min to the absolute min freq for the CPU.
 	 */
-	if (test_bit(INPUT_BOOST, &b->state))
+	if (test_bit(MAX_BOOST, &b->state))
+		policy->min = get_max_boost_freq(policy);
+	else if (test_bit(INPUT_BOOST, &b->state))
 		policy->min = get_input_boost_freq(policy);
 	else if (cpumask_test_cpu(policy->cpu, cpu_lp_mask))
 		policy->min = cpu_freq_min_little;
