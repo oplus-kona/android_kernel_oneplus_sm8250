@@ -103,6 +103,14 @@ static struct boost_drv boost_drv_g __read_mostly = {
 	.boost_waitq = __WAIT_QUEUE_HEAD_INITIALIZER(boost_drv_g.boost_waitq)
 };
 
+static const struct cpumask lp_mask = { { 0x0f } };     /* CPUs 0-3: Little (LP) */
+static const struct cpumask perf_mask = { { 0x70 } };   /* CPUs 4-6: Big (Perf) */
+static const struct cpumask prime_mask = { { 0x80 } };  /* CPU 7:    Prime */
+
+#define cpu_lp_mask (&lp_mask)
+#define cpu_perf_mask (&perf_mask)
+#define cpu_prime_mask (&prime_mask)
+
 static unsigned int get_input_boost_freq(struct cpufreq_policy *policy)
 {
 	unsigned int freq;
