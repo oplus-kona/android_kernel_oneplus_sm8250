@@ -138,10 +138,6 @@ struct cpuset {
 	int relax_domain_level;
 };
 
-static struct cpuset *display_cpuset;
-static bool need_hp;
-static struct work_struct dynamic_cpuset_work;
-static void dynamic_cpuset_worker(struct work_struct *work);
 
 static inline struct cpuset *css_cs(struct cgroup_subsys_state *css)
 {
@@ -2074,12 +2070,6 @@ static int cpuset_css_online(struct cgroup_subsys_state *css)
 	cpumask_copy(cs->effective_cpus, parent->cpus_allowed);
 	spin_unlock_irq(&callback_lock);
 out_unlock:
-	{
-		char name_buf[64];
-		cgroup_name(css->cgroup, name_buf, sizeof(name_buf));
-		if (!strcmp(name_buf, "display"))
-			display_cpuset = cs;
-	}
 	mutex_unlock(&cpuset_mutex);
 	put_online_cpus();
 	return 0;
@@ -2470,7 +2460,6 @@ void __init cpuset_init_smp(void)
 	cpuset_migrate_mm_wq = alloc_ordered_workqueue("cpuset_migrate_mm", 0);
 	BUG_ON(!cpuset_migrate_mm_wq);
 
-	INIT_WORK(&dynamic_cpuset_work, dynamic_cpuset_worker);
 }
 
 /**
@@ -2836,56 +2825,4 @@ void cpuset_task_status_allowed(struct seq_file *m, struct task_struct *task)
 		   nodemask_pr_args(&task->mems_allowed));
 }
 
-static void dynamic_cpuset_worker(struct work_struct *work)
-{
-	struct cpuset *cs = display_cpuset;
-	struct cpuset *trialcs;
-
-	if (!cs)
-		return;
-
-	css_get(&cs->css);
-	flush_work(&cpuset_hotplug_work);
-
-	get_online_cpus();
-	mutex_lock(&cpuset_mutex);
-	if (!is_cpuset_online(cs))
-		goto out_unlock;
-
-	trialcs = alloc_trial_cpuset(cs);
-	if (!trialcs)
-		goto out_unlock;
-
-	if (need_hp)
-		update_cpumask(cs, trialcs, "4-6");
-	else
-		update_cpumask(cs, trialcs, "0-6");
-
-	free_trial_cpuset(trialcs);
-out_unlock:
-	mutex_unlock(&cpuset_mutex);
-	put_online_cpus();
-	css_put(&cs->css);
-	flush_workqueue(cpuset_migrate_mm_wq);
-}
-
-void do_hp_cpuset(void)
-{
-	if (need_hp)
-		return;
-
-	need_hp = true;
-
-	schedule_work(&dynamic_cpuset_work);
-}
-
-void do_lp_cpuset(void)
-{
-	if (!need_hp)
-		return;
-
-	need_hp = false;
-
-	schedule_work(&dynamic_cpuset_work);
-}
 

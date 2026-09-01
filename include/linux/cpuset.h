@@ -118,8 +118,6 @@ extern void rebuild_sched_domains(void);
 
 extern void cpuset_print_current_mems_allowed(void);
 
-void do_hp_cpuset(void);
-void do_lp_cpuset(void);
 
 /*
  * read_mems_allowed_begin is required when making decisions involving
@@ -278,8 +276,6 @@ static inline bool read_mems_allowed_retry(unsigned int seq)
 	return false;
 }
 
-static inline void do_hp_cpuset(void) {}
-static inline void do_lp_cpuset(void) {}
 
 
 #endif /* !CONFIG_CPUSETS */
