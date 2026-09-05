@@ -45,9 +45,11 @@
 	ramoops: ramoops@0xB0000000 {
 		compatible = "ramoops";
 		reg = <0 0xB0000000 0 0x00400000>;
-		record-size = <0x200000>;
+		record-size = <0x100000>;
+		console-size = <0x100000>;
 		pmsg-size = <0x200000>;
 		max-reason = <4>;
+		no-map;
 	};
 };
 
