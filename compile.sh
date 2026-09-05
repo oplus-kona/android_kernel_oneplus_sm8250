@@ -173,12 +173,8 @@ declare -A DEVICE_NAME_MAP=(
     ["kona"]="OnePlus-SM8250"
 )
 
-# Toolchain selection & auto-fetch
-if [[ "$*" == *neutron* ]]; then
-    fetch_neutron_clang
-    export PATH="$TOOLCHAINS_DIR/neutron-clang/bin:$PATH"
-    TC="Neutron-Clang"
-elif [[ "$*" == *aosp* && -d "$TOOLCHAINS_DIR/aosp-clang" ]]; then
+# Toolchain selection (Defaults to Neutron Clang)
+if [[ "$*" == *aosp* && -d "$TOOLCHAINS_DIR/aosp-clang" ]]; then
     export PATH="$TOOLCHAINS_DIR/aosp-clang/bin:$PATH"
     TC="AOSP-Clang"
 elif [[ "$*" == *llvm* && -d "$TOOLCHAINS_DIR/llvm-clang" ]]; then
@@ -187,17 +183,10 @@ elif [[ "$*" == *llvm* && -d "$TOOLCHAINS_DIR/llvm-clang" ]]; then
 elif [[ "$*" == *lilium* && -d "$TOOLCHAINS_DIR/lilium-clang" ]]; then
     export PATH="$TOOLCHAINS_DIR/lilium-clang/bin:$PATH"
     TC="Lilium-Clang"
-elif [[ -d "$TOOLCHAINS_DIR/clang" ]]; then
-    export PATH="$TOOLCHAINS_DIR/clang/bin:$PATH"
-    TC="Clang"
-elif [[ -d "$TOOLCHAINS_DIR/neutron-clang" ]]; then
-    export PATH="$TOOLCHAINS_DIR/neutron-clang/bin:$PATH"
-    TC="Neutron-Clang"
-elif which clang >/dev/null 2>&1; then
+elif [[ "$*" == *host* ]] && which clang >/dev/null 2>&1; then
     CLANG_VER=$(clang --version | head -n 1 | awk '{print $1,$2,$3,$4}')
     TC="Host-Clang (${CLANG_VER})"
 else
-    echo "--- ! No toolchain found, auto-fetching Neutron Clang... ! ---"
     fetch_neutron_clang
     export PATH="$TOOLCHAINS_DIR/neutron-clang/bin:$PATH"
     TC="Neutron-Clang"
