@@ -1,3 +1,6 @@
 [submodule "drivers/kernelsu"]
 	path = drivers/kernelsu
 	url = https://github.com/rsuntk/KernelSU.git
+[submodule "rbe"]
+	path = rbe
+	url = https://github.com/Sanjis-Android-Playground/rbe.git

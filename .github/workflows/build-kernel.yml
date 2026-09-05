@@ -1,0 +1,94 @@
+name: Build OnePlus SM8250 Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: Device to build (kebab, instantnoodle, instantnoodlep, lemonades)
+        required: false
+        default: kebab
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            flex \
+            bison \
+            llvm \
+            lld \
+            bc \
+            cpio \
+            make \
+            git \
+            curl \
+            python3 \
+            python3-dev \
+            zip \
+            ccache \
+            openssl \
+            libssl-dev
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: kernel-kona-${{ github.ref }}
+          max-size: 2G
+
+      - name: Setup git submodules
+        run: |
+          git submodule update --init --recursive
+
+      - name: Setup RBE (Remote Build Execution)
+        run: |
+          cd rbe
+          chmod +x install_rbe.sh
+          sudo ./install_rbe.sh
+          cd ..
+          source /etc/profile.d/rbe_env.sh || true
+
+      - name: Build kernel
+        env:
+          USE_RBE: 1
+          BUILDBUDDY_API_KEY: YpI8qoAej5BTHTPjqKwz
+          RBE_remote_headers: x-buildbuddy-api-key=YpI8qoAej5BTHTPjqKwz
+        run: |
+          source /etc/profile.d/rbe_env.sh || true
+          chmod +x ./compile.sh
+          ./compile.sh neutron ${{ github.event.inputs.device || 'kebab' }}
+
+      - name: Upload kernel artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-zip
+          path: out/*.zip
+          retention-days: 30
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: out/kernel_compile.log
+          retention-days: 7
+
+      - name: Get build info
+        if: always()
+        run: |
+          echo "Build artifacts location: $PWD/out/"
+          ls -lh out/*.zip 2>/dev/null || echo "No zip files generated"
+          echo "Build log:"
+          tail -100 out/kernel_compile.log 2>/dev/null || echo "No log available"

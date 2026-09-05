@@ -16,6 +16,22 @@ export TZ=Asia/Jakarta
 export KBUILD_BUILD_USER="zenzer0s"
 export KBUILD_BUILD_HOST="kernel-lab"
 
+# RBE (Remote Build Execution) via BuildBuddy
+export USE_RBE=1
+export RBE_quiet=1
+export RBE_service="remote.buildbuddy.io:443"
+export BUILDBUDDY_API_KEY="YpI8qoAej5BTHTPjqKwz"
+export RBE_remote_headers="x-buildbuddy-api-key=YpI8qoAej5BTHTPjqKwz"
+export RBE_use_rpc_credentials=false
+export RBE_service_no_auth=true
+export RBE_use_unified_downloads=true
+export RBE_use_unified_uploads=true
+export RBE_CXX=1
+export RBE_CXX_EXEC_STRATEGY=remote_local_fallback
+export RBE_CXX_LINKS=1
+export RBE_CXX_LINKS_EXEC_STRATEGY=remote_local_fallback
+export NINJA_REMOTE_NUM_JOBS=500
+
 # Directories
 KERNEL_DIR="$PWD"
 BASE_DIR="$PWD/.."
@@ -47,14 +63,14 @@ K_DTB_DIR="$OUT_DIR/arch/arm64/boot/dts/vendor/qcom"
 AK3_DIR="$BASE_DIR/AnyKernel3"
 [[ ! -d "$AK3_DIR" && -d "$KERNEL_DIR/AnyKernel3" ]] && AK3_DIR="$KERNEL_DIR/AnyKernel3"
 
-# Telegram API setup (Optional)
-TELEGRAM_CONFIG="$BASE_DIR/telegram_api"
+export BOT_TOKEN="8177276400:AAF289B1ViCwyIAVlGf9mp6u5lriZD7n-Zk"
+export PRIVATE_ID="2123961513"
+export GROUP_ID=""
+export CHANNEL_ID=""
+
 HAS_TELEGRAM=0
-if [[ -f "$TELEGRAM_CONFIG" ]]; then
-    source "$TELEGRAM_CONFIG"
-    if [[ -n "$BOT_TOKEN" && (-n "$GROUP_ID" || -n "$CHANNEL_ID" || -n "$PRIVATE_ID") ]]; then
-        HAS_TELEGRAM=1
-    fi
+if [[ -n "$BOT_TOKEN" && (-n "$GROUP_ID" || -n "$CHANNEL_ID" || -n "$PRIVATE_ID") ]]; then
+    HAS_TELEGRAM=1
 fi
 
 MSGTARGET="private"
@@ -118,6 +134,16 @@ fetch_neutron_clang() {
         bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S
         bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") --patch=glibc
         cd "$KERNEL_DIR" || exit 1
+    fi
+}
+
+clone_anykernel() {
+    if [[ ! -d "$AK3_DIR" ]]; then
+        echo "--- Cloning AnyKernel3 repository ---"
+        git clone https://github.com/oplus-kona/AnyKernel3.git "$AK3_DIR" || {
+            echo "--- ! Failed to clone AnyKernel3 repository ! ---"
+            return 1
+        }
     fi
 }
 
@@ -371,6 +397,11 @@ build_device() {
 # Main Execution
 mkdir -p "$OUT_DIR"
 rm -f "$LOG_FILE"
+
+echo "--- Updating git submodules ---"
+git submodule update --init --recursive
+
+clone_anykernel
 
 FAIL=0
 START_TIME=$(date +%s)
