@@ -4802,6 +4802,7 @@ extern int oplus_dimlayer_hbm;
 extern int oplus_dimlayer_aod;
 extern int oplus_dimlayer_bl_alpha_value;
 extern int oplus_dimlayer_bl_enable;
+extern int oplus_dimlayer_bl_enable_v2;
 extern bool oplus_ffl_trigger_finish;
 extern int oplus_dimlayer_bl;
 extern ktime_t oplus_backlight_time;
@@ -4837,7 +4838,7 @@ static int sde_crtc_onscreenfinger_atomic_check(struct sde_crtc_state *cstate,
 	if (!is_dsi_panel(cstate->base.crtc))
 		return 0;
 
-	if (oplus_dimlayer_bl_enable) {
+	if (oplus_dimlayer_bl_enable || oplus_dimlayer_bl_enable_v2) {
 		int backlight = oplus_get_panel_brightness();
 
 		if (backlight > 1 &&

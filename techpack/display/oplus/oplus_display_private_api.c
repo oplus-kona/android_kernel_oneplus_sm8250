@@ -1794,6 +1794,10 @@ int oplus_panel_process_dimming_v2(struct dsi_panel *panel, int bl_lvl,
 	struct drm_connector *dsi_connector = display->drm_conn;
 	bool need_sync = false;
 
+	if (panel && (!strcmp(panel->oplus_priv.vendor_name, "AMB655X") ||
+		      !strcmp(panel->oplus_priv.vendor_name, "AMB655UV01")))
+		return bl_lvl;
+
 	oplus_datadimming_v2_need_flush = false;
 	oplus_datadimming_v2_need_sync = false;
 	if (!force_disable && oplus_dimlayer_bl_enable_v2_real && bl_lvl > 1 &&
@@ -1910,7 +1914,11 @@ static ssize_t oplus_display_set_dimlayer_enable(struct kobject *obj,
 
 		usleep_range(17000, 17100);
 		if (!strcmp(display->panel->oplus_priv.vendor_name,
-			    "ANA6706")) {
+			    "ANA6706") ||
+		    !strcmp(display->panel->oplus_priv.vendor_name,
+			    "AMB655X") ||
+		    !strcmp(display->panel->oplus_priv.vendor_name,
+			    "AMB655UV01")) {
 			oplus_dimlayer_bl_enable = enable;
 		} else {
 			if (!strcmp(display->panel->name,

@@ -1390,7 +1390,11 @@ int oplus_display_panel_set_dimlayer_enable(void *data)
 
 		usleep_range(17000, 17100);
 		if (!strcmp(display->panel->oplus_priv.vendor_name,
-			    "ANA6706")) {
+			    "ANA6706") ||
+		    !strcmp(display->panel->oplus_priv.vendor_name,
+			    "AMB655X") ||
+		    !strcmp(display->panel->oplus_priv.vendor_name,
+			    "AMB655UV01")) {
 			oplus_dimlayer_bl_enable = enable;
 		} else {
 			if (!strcmp(display->panel->name,
@@ -1415,14 +1419,16 @@ int oplus_display_panel_get_dimlayer_enable(void *data)
 		return -EINVAL;
 
 	if (display->name) {
-		if (!strcmp(display->panel->oplus_priv.vendor_name, "ANA6706"))
+		if (!strcmp(display->panel->oplus_priv.vendor_name, "ANA6706") ||
+		    !strcmp(display->panel->oplus_priv.vendor_name, "AMB655X") ||
+		    !strcmp(display->panel->oplus_priv.vendor_name, "AMB655UV01"))
 			(*dimlayer_bl_enable) = oplus_dimlayer_bl_enable;
 		else if (!strcmp(display->panel->name, "boe nt37800 amoled fhd+ panel with DSC"))
 			(*dimlayer_bl_enable) = oplus_dimlayer_bl_enable_v3;
 		else
 			(*dimlayer_bl_enable) = oplus_dimlayer_bl_enable_v2;
 	} else {
-		(*dimlayer_bl_enable) = oplus_dimlayer_bl_enable_v2;
+		(*dimlayer_bl_enable) = oplus_dimlayer_bl_enable;
 	}
 
 	return 0;
