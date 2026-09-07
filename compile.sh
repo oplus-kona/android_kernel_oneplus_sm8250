@@ -283,7 +283,7 @@ zipbuild() {
     cd "$AK3_DIR"
 
     DEVICE_NAME="${DEVICE_NAME_MAP[$DEVICE]:-$DEVICE}"
-    ZIP_NAME="Kernel-${DEVICE_NAME}-${BRANCH}-${COMMIT_HASH}-$(date "+%y%m%d-%H%M").zip"
+    ZIP_NAME="zenkernel-oplus-sm8250-$(date "+%y%m%d-%H%M").zip"
 
     # Clean old artifacts in AK3
     rm -rf Image Image.gz dtb dtbo.img modules/vendor/lib/modules/*.ko "${TARGET}"*
