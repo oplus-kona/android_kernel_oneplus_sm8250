@@ -15795,23 +15795,26 @@ int oplus_chg_set_pd_config(void)
 		printk(KERN_ERR "%s: charger voltage=%d", __func__, usbtemp_get_charger_voltage_now());
 		oplus_chg_unsuspend_charger();
 	} else if (chip->batt_volt < chip->limits.vbatt_pdqc_to_9v_thr) {
+		int pd_ma = (chip->limits.pd_input_current_charger_ma > 0) ?
+			    chip->limits.pd_input_current_charger_ma : 3000;
+
 		if (oplus_chg_get_voocphy_support() == AP_SINGLE_CP_VOOCPHY)
 			oplus_voocphy_set_pdqc_config();
 		oplus_chg_suspend_charger();
 		oplus_chg_config_charger_vsys_threshold(0x02); //set Vsys Skip threshold 104%
 		oplus_chg_enable_burst_mode(false);
-		ret = oplus_pdo_select(9000, 2000);
+		ret = oplus_pdo_select(9000, pd_ma);
 		charger_volt = usbtemp_get_charger_voltage_now();
-		printk(KERN_ERR "%s: vbus[%d], ibus[%d], ret[%d], charger_volt=%d\n", __func__, 9000, 2000, ret,
+		printk(KERN_ERR "%s: vbus[%d], ibus[%d], ret[%d], charger_volt=%d\n", __func__, 9000, pd_ma, ret,
 		       charger_volt);
 		while ((charger_volt < 7500) && (cnt_pd_retry < 5)) {
 			msleep(150);
-			ret = oplus_pdo_select(9000, 2000);
+			ret = oplus_pdo_select(9000, pd_ma);
 			msleep(50);
 			charger_volt = usbtemp_get_charger_voltage_now();
 			cnt_pd_retry++;
 			printk(KERN_ERR "%s: vbus[%d], ibus[%d], ret[%d], retry_cnt[%d], charger_volt=%d\n", __func__,
-			       9000, 2000, ret, cnt_pd_retry, charger_volt);
+			       9000, pd_ma, ret, cnt_pd_retry, charger_volt);
 		}
 		msleep(300);
 		oplus_chg_unsuspend_charger();

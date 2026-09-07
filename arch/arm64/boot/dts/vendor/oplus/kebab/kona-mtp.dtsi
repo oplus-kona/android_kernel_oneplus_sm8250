@@ -1145,13 +1145,11 @@
 	// for smb5:
 	qcom,usb-icl-ua = <3000000>;
 	qcom,fcc-max-ua = <3000000>;
-	qcom,qc3-disable;
-	qcom,hvdcp-disable;
 	qcom,float-option = <1>;
 	qcom,oplus-pps-usbpd-detection = <&pm8150b_pdphy>;
 
 	// for oplus chg framework:
-	qcom,input_current_charger_ma = <2000>;
+	qcom,input_current_charger_ma = <2500>;
 	qcom,pd_input_current_charger_ma = <3000>;
 	qcom,qc_input_current_charger_ma = <2000>;
 
@@ -1220,7 +1218,7 @@
 	qcom,qc_temp_little_cool_fastchg_current_ma = <2000>;
 
 	qcom,normal_bat_decidegc = <160>; /* 16C~44C */
-	qcom,temp_normal_fastchg_current_ma = <1100>;
+	qcom,temp_normal_fastchg_current_ma = <1500>;
 	qcom,temp_normal_vfloat_mv = <4435>;
 	qcom,pd_temp_normal_fastchg_current_ma = <3000>;
 	qcom,qc_temp_normal_fastchg_current_ma = <2000>;
