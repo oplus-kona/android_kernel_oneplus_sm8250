@@ -1706,6 +1706,7 @@ void oplus_chg_enable_charge(void);
 void oplus_chg_disable_charge(void);
 void oplus_chg_unsuspend_charger(void);
 void oplus_chg_suspend_charger(void);
+bool oplus_is_bypass_charging(void);
 
 int oplus_chg_get_chg_type(void);
 int oplus_chg_get_pps_type(void);

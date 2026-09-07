@@ -1058,6 +1058,10 @@ int oplus_battery_get_property(struct power_supply *psy, enum power_supply_prope
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
+		if (oplus_is_bypass_charging()) {
+			val->intval = POWER_SUPPLY_STATUS_NOT_CHARGING;
+			break;
+		}
 		if (chip->wls_status_keep) {
 			val->intval = pre_batt_status;
 		} else {
@@ -6644,7 +6648,7 @@ void oplus_chg_turn_on_ffc2(struct oplus_chg_chip *chip)
 	if ((!chip->authenticate) || (!chip->hmac)) {
 		return;
 	}
-	if (!chip->mmi_chg) {
+	if (!chip->mmi_chg || oplus_is_bypass_charging()) {
 		return;
 	}
 	if (chip->balancing_bat_stop_chg) {
@@ -6698,7 +6702,7 @@ void oplus_chg_turn_on_charging(struct oplus_chg_chip *chip)
 		return;
 	}
 
-	if (!chip->mmi_chg) {
+	if (!chip->mmi_chg || oplus_is_bypass_charging()) {
 		return;
 	}
 	if (oplus_ufcs_get_chg_status() == UFCS_CHARGERING) {
@@ -6817,7 +6821,7 @@ static void oplus_chg_voter_charging_start(struct oplus_chg_chip *chip, OPLUS_CH
 	if (!chip->authenticate) {
 		return;
 	}
-	if (!chip->mmi_chg) {
+	if (!chip->mmi_chg || oplus_is_bypass_charging()) {
 		return;
 	}
 	if (oplus_vooc_get_allow_reading() == false) {
@@ -7982,7 +7986,7 @@ void oplus_chg_variables_reset(struct oplus_chg_chip *chip, bool in)
 			oplus_adsp_voocphy_turn_off();
 		}
 	} else {
-		if (!in)
+		if (!in && !oplus_is_bypass_charging())
 			chip->mmi_chg = 1;
 	}
 #endif /* SELL_MODE */
@@ -10313,8 +10317,8 @@ static void oplus_chg_fast_switch_check(struct oplus_chg_chip *chip)
 		charger_xlog_printk(CHG_LOG_CRTI, " short_c_battery, return\n");
 		return;
 	}
-	if (chip->mmi_chg == 0) {
-		charger_xlog_printk(CHG_LOG_CRTI, " mmi_chg,return\n");
+	if (chip->mmi_chg == 0 || oplus_is_bypass_charging()) {
+		charger_xlog_printk(CHG_LOG_CRTI, " mmi_chg or bypass,return\n");
 		return;
 	}
 	if (chip->balancing_bat_stop_chg == 1 || chip->balancing_bat_stop_fastchg == 1) {

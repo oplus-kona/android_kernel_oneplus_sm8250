@@ -81,6 +81,12 @@ struct smb_charger *g_chg;
 #endif // OPLUS_CUSTOM_OP_DEF
 bool fg_oplus_set_input_current = false;
 bool suspend_usb = false;
+static int bypass_charging = 0;
+bool oplus_is_bypass_charging(void)
+{
+	return bypass_charging > 0;
+}
+EXPORT_SYMBOL(oplus_is_bypass_charging);
 bool oplus_ccdetect_check_is_gpio(struct oplus_chg_chip *chip);
 int oplus_ccdetect_gpio_init(struct oplus_chg_chip *chip);
 void oplus_ccdetect_irq_init(struct oplus_chg_chip *chip);
@@ -3085,8 +3091,7 @@ int smblib_vbus_regulator_is_enabled(struct regulator_dev *rdev)
 
 int smblib_get_prop_input_suspend(struct smb_charger *chg, union power_supply_propval *val)
 {
-	val->intval = (get_client_vote(chg->usb_icl_votable, USER_VOTER) == 0) &&
-		      get_client_vote(chg->dc_suspend_votable, USER_VOTER);
+	val->intval = bypass_charging;
 	return 0;
 }
 
@@ -3449,22 +3454,91 @@ int smblib_get_batt_current_now(struct smb_charger *chg, union power_supply_prop
 
 int smblib_set_prop_input_suspend(struct smb_charger *chg, const union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
-	/* vote 0mA when suspended */
-	rc = vote(chg->usb_icl_votable, USER_VOTER, (bool)val->intval, 0);
+	if (val->intval == 1 || val->intval == 2) {
+		bypass_charging = val->intval;
+
+		/* Keep USB/DC input active so phone runs on external power */
+		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
+		vote(chg->dc_suspend_votable, USER_VOTER, false, 0);
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+		/* Unsuspend charger hardware so external power feeds VSYS */
+		if (g_oplus_chip && g_oplus_chip->chg_ops && g_oplus_chip->chg_ops->charger_unsuspend)
+			g_oplus_chip->chg_ops->charger_unsuspend();
+
+		/* Turn off VOOC fast charging if active and disallow negotiation */
+		if (oplus_vooc_get_fastchg_started() == true)
+			oplus_vooc_turn_off_fastchg();
+		oplus_vooc_set_fastchg_allow(false);
+
+		/* Disable battery charging on the active charger IC (MP2650 on OP8T/9R or SMB5 on OP8/8P) */
+		if (g_oplus_chip && g_oplus_chip->chg_ops && g_oplus_chip->chg_ops->charging_disable)
+			g_oplus_chip->chg_ops->charging_disable();
+
+		/* Freeze OPLUS charging state machine to prevent re-enabling charging */
+		if (g_oplus_chip) {
+			g_oplus_chip->allow_swtich_to_fastchg = false;
+			g_oplus_chip->mmi_chg = 0;
+			g_oplus_chip->stop_chg = 0;
+			g_oplus_chip->chging_on = false;
+			g_oplus_chip->prop_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+		}
+#endif
+		/* Vote to disable charging on SMB5 PMIC */
+		rc = vote(chg->chg_disable_votable, BYPASS_VOTER, true, 0);
+
+		if (val->intval == 2) {
+			/* Mode 2: Bypass charging with thermal throttling mitigation cleared */
+			chg->system_temp_level = 0;
+			vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
+			vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
+#ifdef OPLUS_FEATURE_CHG_BASIC
+			if (g_oplus_chip)
+				g_oplus_chip->cool_down = 0;
+#endif
+		}
+	} else {
+		bypass_charging = 0;
+
+		/* Restore SMB5 charge enable vote */
+		rc = vote(chg->chg_disable_votable, BYPASS_VOTER, false, 0);
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+		/* Restore VOOC fast charging permission */
+		oplus_vooc_set_fastchg_allow(true);
+
+		/* Restore OPLUS charging state machine */
+		if (g_oplus_chip) {
+			g_oplus_chip->allow_swtich_to_fastchg = true;
+			g_oplus_chip->mmi_chg = 1;
+			g_oplus_chip->stop_chg = 1;
+			g_oplus_chip->batt_full = false;
+			g_oplus_chip->charging_state = CHARGING_STATUS_CCCV;
+		}
+
+		/* Re-enable charging on the active charger IC */
+		if (g_oplus_chip && g_oplus_chip->chg_ops && g_oplus_chip->chg_ops->charging_enable)
+			g_oplus_chip->chg_ops->charging_enable();
+
+		/* Wake up update_work to re-evaluate charging loop immediately */
+		oplus_chg_wake_update_work();
+#endif
+	}
+
 	if (rc < 0) {
-		smblib_err(chg, "Couldn't vote to %s USB rc=%d\n", (bool)val->intval ? "suspend" : "resume", rc);
+		smblib_err(chg, "Couldn't vote to %d input_suspend rc=%d\n", val->intval, rc);
 		return rc;
 	}
 
-	rc = vote(chg->dc_suspend_votable, USER_VOTER, (bool)val->intval, 0);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't vote to %s DC rc=%d\n", (bool)val->intval ? "suspend" : "resume", rc);
-		return rc;
-	}
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if (g_oplus_chip && g_oplus_chip->batt_psy)
+		power_supply_changed(g_oplus_chip->batt_psy);
+#endif
+	if (chg->batt_psy)
+		power_supply_changed(chg->batt_psy);
 
-	power_supply_changed(chg->batt_psy);
 	return rc;
 }
 
@@ -3479,22 +3553,14 @@ int smblib_set_prop_batt_capacity(struct smb_charger *chg, const union power_sup
 
 int smblib_set_prop_batt_status(struct smb_charger *chg, const union power_supply_propval *val)
 {
-	/* Faking battery full */
-	if (val->intval == POWER_SUPPLY_STATUS_FULL)
-		chg->fake_batt_status = val->intval;
-	else
-		chg->fake_batt_status = -EINVAL;
-
+	/* fake status */
+	chg->fake_batt_status = val->intval;
 	power_supply_changed(chg->batt_psy);
-
 	return 0;
 }
 
 int smblib_set_prop_system_temp_level(struct smb_charger *chg, const union power_supply_propval *val)
 {
-	if (val->intval < 0)
-		return -EINVAL;
-
 	if (chg->thermal_levels <= 0)
 		return -EINVAL;
 
@@ -3502,6 +3568,9 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg, const union power
 		return -EINVAL;
 
 	chg->system_temp_level = val->intval;
+
+	if (bypass_charging == 2)
+		chg->system_temp_level = 0;
 
 	if (chg->system_temp_level == chg->thermal_levels)
 		return vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, true, 0);

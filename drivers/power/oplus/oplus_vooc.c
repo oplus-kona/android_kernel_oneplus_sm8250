@@ -2475,6 +2475,9 @@ bool oplus_vooc_get_fastchg_ing(void)
 
 bool oplus_vooc_get_fastchg_allow(void)
 {
+	if (oplus_is_bypass_charging())
+		return false;
+
 	if (!g_vooc_chip) {
 		return false;
 	} else {

@@ -42,6 +42,7 @@
 
 static void update_sw_icl_max(struct smb_charger *chg, int pst);
 static int smblib_get_prop_typec_mode(struct smb_charger *chg);
+static int bypass_charging = 0;
 
 int smblib_read(struct smb_charger *chg, u16 addr, u8 *val)
 {
@@ -1912,11 +1913,10 @@ int smblib_vbus_regulator_is_enabled(struct regulator_dev *rdev)
 int smblib_get_prop_input_suspend(struct smb_charger *chg,
 				  union power_supply_propval *val)
 {
-	val->intval
-		= (get_client_vote(chg->usb_icl_votable, USER_VOTER) == 0)
-		 && get_client_vote(chg->dc_suspend_votable, USER_VOTER);
+	val->intval = bypass_charging;
 	return 0;
 }
+
 
 int smblib_get_prop_batt_present(struct smb_charger *chg,
 				union power_supply_propval *val)
@@ -2352,20 +2352,30 @@ int smblib_get_batt_current_now(struct smb_charger *chg,
 int smblib_set_prop_input_suspend(struct smb_charger *chg,
 				  const union power_supply_propval *val)
 {
-	int rc;
+	int rc = 0;
 
-	/* vote 0mA when suspended */
-	rc = vote(chg->usb_icl_votable, USER_VOTER, (bool)val->intval, 0);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't vote to %s USB rc=%d\n",
-			(bool)val->intval ? "suspend" : "resume", rc);
-		return rc;
+	if (val->intval == 1 || val->intval == 2) {
+		bypass_charging = val->intval;
+
+		/* keep USB/DC input active so phone runs on external power */
+		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
+		vote(chg->dc_suspend_votable, USER_VOTER, false, 0);
+
+		rc = vote(chg->chg_disable_votable, BYPASS_VOTER, true, 0);
+
+		if (val->intval == 2) {
+			chg->system_temp_level = 0;
+			vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
+			vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
+		}
+	} else {
+		bypass_charging = 0;
+		rc = vote(chg->chg_disable_votable, BYPASS_VOTER, false, 0);
 	}
 
-	rc = vote(chg->dc_suspend_votable, USER_VOTER, (bool)val->intval, 0);
 	if (rc < 0) {
-		smblib_err(chg, "Couldn't vote to %s DC rc=%d\n",
-			(bool)val->intval ? "suspend" : "resume", rc);
+		smblib_err(chg, "Couldn't vote to %d input_suspend rc=%d\n",
+			val->intval, rc);
 		return rc;
 	}
 
@@ -2386,11 +2396,7 @@ int smblib_set_prop_batt_capacity(struct smb_charger *chg,
 int smblib_set_prop_batt_status(struct smb_charger *chg,
 				  const union power_supply_propval *val)
 {
-	/* Faking battery full */
-	if (val->intval == POWER_SUPPLY_STATUS_FULL)
-		chg->fake_batt_status = val->intval;
-	else
-		chg->fake_batt_status = -EINVAL;
+	chg->fake_batt_status = val->intval;
 
 	power_supply_changed(chg->batt_psy);
 
@@ -2410,6 +2416,9 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		return -EINVAL;
 
 	chg->system_temp_level = val->intval;
+
+	if (bypass_charging == 2)
+		chg->system_temp_level = 0;
 
 	if (chg->system_temp_level == chg->thermal_levels)
 		return vote(chg->chg_disable_votable,

@@ -6140,6 +6140,9 @@ bool oplus_voocphy_check_fastchg_real_allow(void)
 }
 bool oplus_voocphy_get_real_fastchg_allow(void)
 {
+	if (oplus_is_bypass_charging())
+		return false;
+
 	if (!g_voocphy_chip) {
 		return false;
 	} else {
