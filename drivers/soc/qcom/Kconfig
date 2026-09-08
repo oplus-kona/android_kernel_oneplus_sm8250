@@ -544,6 +544,17 @@ config MINIDUMP_MAX_ENTRIES
 	  This defines maximum number of entries to be allocated for application
 	  subsytem in Minidump table.
 
+config QCOM_MINIDUMP_PSTORE
+	bool "QCOM Minidump Pstore dumps Support"
+	depends on ARM64 && QCOM_MINIDUMP
+	default y
+	help
+	  This enables pstore registration in minidump table.
+	  Here, pstore framework dump logs like pmsg, dmesg,
+	  console, ftrace etc. in the given carve-out memory
+	  (non-volatile memory) and during warm reboot these
+	  dumps will be preserved across reset.
+
 config QCOM_APR
 	tristate "Qualcomm APR Bus (Asynchronous Packet Router)"
 	depends on ARCH_QCOM

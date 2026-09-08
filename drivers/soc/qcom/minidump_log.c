@@ -18,6 +18,9 @@
 #include <linux/mm.h>
 #include <linux/sched/task.h>
 #include <linux/vmalloc.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/of_reserved_mem.h>
 
 static bool is_vmap_stack __read_mostly;
 
@@ -356,6 +359,99 @@ static void register_irq_stack(void)
 static inline void register_irq_stack(void) {}
 #endif
 
+#ifdef CONFIG_QCOM_MINIDUMP_PSTORE
+static void register_pstore_info(void)
+{
+	int ret;
+	struct device_node *node;
+	struct resource resource;
+	struct reserved_mem *rmem = NULL;
+	unsigned int size;
+	phys_addr_t paddr;
+	struct md_region md_entry;
+
+	node = of_find_compatible_node(NULL, NULL, "ramoops");
+	if (IS_ERR_OR_NULL(node)) {
+		pr_err("Failed to get pstore node\n");
+		return;
+	}
+
+	ret = of_address_to_resource(node, 0, &resource);
+	if (ret) {
+		rmem = of_reserved_mem_lookup(node);
+		if (rmem) {
+			paddr = rmem->base;
+		} else {
+			pr_err("Failed to get pstore mem\n");
+			of_node_put(node);
+			return;
+		}
+	} else {
+		paddr = resource.start;
+	}
+
+	ret = of_property_read_u32(node, "record-size", &size);
+	if (!ret && size > 0) {
+		strlcpy(md_entry.name, "KDMESG", sizeof(md_entry.name));
+		md_entry.virt_addr = (uintptr_t)phys_to_virt(paddr);
+		md_entry.phys_addr = paddr;
+		md_entry.size = size;
+		md_entry.id = 0;
+
+		if (msm_minidump_add_region(&md_entry) < 0)
+			pr_err("Failed to add dmesg in Minidump\n");
+
+		paddr += size;
+	}
+
+	ret = of_property_read_u32(node, "console-size", &size);
+	if (!ret && size > 0) {
+		strlcpy(md_entry.name, "KCONSOLE", sizeof(md_entry.name));
+		md_entry.virt_addr = (uintptr_t)phys_to_virt(paddr);
+		md_entry.phys_addr = paddr;
+		md_entry.size = size;
+		md_entry.id = 0;
+
+		if (msm_minidump_add_region(&md_entry) < 0)
+			pr_err("Failed to add console in Minidump\n");
+
+		paddr += size;
+	}
+
+	ret = of_property_read_u32(node, "ftrace-size", &size);
+	if (!ret && size > 0) {
+		strlcpy(md_entry.name, "KFTRACE", sizeof(md_entry.name));
+		md_entry.virt_addr = (uintptr_t)phys_to_virt(paddr);
+		md_entry.phys_addr = paddr;
+		md_entry.size = size;
+		md_entry.id = 0;
+
+		if (msm_minidump_add_region(&md_entry) < 0)
+			pr_err("Failed to add ftrace in Minidump\n");
+
+		paddr += size;
+	}
+
+	ret = of_property_read_u32(node, "pmsg-size", &size);
+	if (!ret && size > 0) {
+		strlcpy(md_entry.name, "KPMSG", sizeof(md_entry.name));
+		md_entry.virt_addr = (uintptr_t)phys_to_virt(paddr);
+		md_entry.phys_addr = paddr;
+		md_entry.size = size;
+		md_entry.id = 0;
+
+		if (msm_minidump_add_region(&md_entry) < 0)
+			pr_err("Failed to add pmsg in Minidump\n");
+
+		paddr += size;
+	}
+
+	of_node_put(node);
+}
+#else
+static inline void register_pstore_info(void) {}
+#endif
+
 static int __init msm_minidump_log_init(void)
 {
 	register_kernel_sections();
@@ -365,6 +461,7 @@ static int __init msm_minidump_log_init(void)
 	register_current_stack();
 #endif
 	register_log_buf();
+	register_pstore_info();
 	return 0;
 }
 subsys_initcall(msm_minidump_log_init);
