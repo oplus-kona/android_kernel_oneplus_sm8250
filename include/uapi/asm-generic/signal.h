@@ -101,6 +101,16 @@ typedef unsigned long old_sigset_t;
 #endif
 
 #ifndef __KERNEL__
+struct __kernel_sigaction {
+	__sighandler_t sa_handler;
+	unsigned long sa_flags;
+#ifdef SA_RESTORER
+	__sigrestore_t sa_restorer;
+#endif
+	sigset_t sa_mask;		/* mask last for extensibility */
+};
+
+#ifndef __BIONIC__
 struct sigaction {
 	__sighandler_t sa_handler;
 	unsigned long sa_flags;
@@ -109,6 +119,7 @@ struct sigaction {
 #endif
 	sigset_t sa_mask;		/* mask last for extensibility */
 };
+#endif
 #endif
 
 typedef struct sigaltstack {
