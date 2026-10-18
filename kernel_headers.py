@@ -551,7 +551,7 @@ def gen_blueprints(
   error_count += find_out(
       verbose, module_dir, arch_prefix, rel_glob, None, arch_out)
 
-  techpack_out = [x.split('include/uapi/')[1] for x in techpack_include_uapi]
+  techpack_out = sorted(list(set([x.split('include/uapi/')[1] for x in techpack_include_uapi])))
 
   if error_count != 0:
     return error_count
@@ -708,7 +708,7 @@ def gen_blueprints(
 
 def parse_bp_for_headers(file_name, headers):
   parsing_headers = False
-  pattern = re.compile("gen_headers_out_[a-zA-Z0-9]+\s*=\s*\[\s*")
+  pattern = re.compile(r"gen_headers_out_[a-zA-Z0-9]+\s*=\s*\[\s*")
   with open(file_name, 'r') as f:
     for line in f:
       line = line.strip()
@@ -814,7 +814,12 @@ def gen_headers(
         arch_uapi_include_prefix, h):
       error_count += 1
 
+  seen_techpack = set()
   for h in techpack_include_uapi:
+    rel_h = h.split('include/uapi/')[1]
+    if rel_h in seen_techpack:
+      continue
+    seen_techpack.add(rel_h)
     techpack_uapi_include_prefix = os.path.join(h.split('/include/uapi')[0], 'include', 'uapi') + os.sep
     if not run_headers_install(
         verbose, gen_dir, headers_install, unifdef,
