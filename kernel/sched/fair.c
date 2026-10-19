@@ -7475,8 +7475,13 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 	if (target_cpu != -1 && !idle_cpu(target_cpu) &&
 			best_idle_cpu != -1) {
 		curr_tsk = READ_ONCE(cpu_rq(target_cpu)->curr);
+#if defined(CONFIG_SCHED_TUNE)
 		if (curr_tsk && schedtune_task_boost_rcu_locked(curr_tsk))
 			target_cpu = best_idle_cpu;
+#elif defined(CONFIG_UCLAMP_TASK)
+		if (curr_tsk && uclamp_eff_value(curr_tsk, UCLAMP_MIN) > 0)
+			target_cpu = best_idle_cpu;
+#endif
 	}
 
 	if (prefer_idle && (best_idle_cpu != -1)) {
