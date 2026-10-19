@@ -18,7 +18,7 @@
 | **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ✅ **PASSED** | 2 / 3 (1 skipped) | Built `Image`, `dtb`, `dtbo.img` in 1m 51s |
 | **Phase 4** | Storage, Filesystems & Block Layer | ✅ **PASSED** | 13 ported (4 base/prior, 1 skipped, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 3m 19s |
 | **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ✅ **PASSED** | 29 ported (30 base, 8 skipped) | Built `Image`, `dtb`, `dtbo.img` in 3m 11s |
-| **Phase 6** | CPU Idle Management & cpuidle Subsystem | ✅ **PASSED** | 97 ported (1 skipped duplicate) | Built `Image`, `dtb`, `dtbo.img` in 1m 41s |
+| **Phase 6** | CPU Idle Management & cpuidle Subsystem | ✅ **BOOTED** | 97 ported (1 skipped duplicate) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0458.zip`) |
 | **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ⏳ **PENDING** | 0 / 46 | Ready to start |
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Pending |
 | **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Pending |
@@ -211,3 +211,4 @@
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
 * **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0458.zip`
   * **MD5 Checksum:** `21f4ae86ec9f8df9461a5777a4a0ff51`
+* **Boot Verification:** Verified booted on OnePlus hardware by user.
