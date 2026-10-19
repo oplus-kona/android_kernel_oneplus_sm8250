@@ -27,8 +27,10 @@ void schedtune_dequeue_task(struct task_struct *p, int cpu);
 
 #ifdef CONFIG_UCLAMP_TASK
 #define schedtune_task_boost(tsk) uclamp_boosted(tsk)
+#define schedtune_task_boost_rcu_locked(tsk) uclamp_boosted(tsk)
 #else
 #define schedtune_task_boost(tsk) 0
+#define schedtune_task_boost_rcu_locked(tsk) 0
 #endif
 
 #ifdef CONFIG_UCLAMP_TASK_GROUP
