@@ -17,8 +17,8 @@
 | **Phase 2** | Core Kernel Synchronization, IPC & Android Binder | ✅ **PASSED** | 24 / 24 | ThinLTO build in 3m 03s, AnyKernel3 zip verified |
 | **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ✅ **PASSED** | 2 / 3 (1 skipped) | Built `Image`, `dtb`, `dtbo.img` in 1m 51s |
 | **Phase 4** | Storage, Filesystems & Block Layer | ✅ **PASSED** | 13 ported (4 base/prior, 1 skipped, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 3m 19s |
-| **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ⏳ **PENDING** | 0 / 67 | Ready to start |
-| **Phase 6** | CPU Idle Management & cpuidle Subsystem | ⏳ **PENDING** | 0 / 98 | Pending |
+| **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ✅ **PASSED** | 29 ported (30 base, 8 skipped) | Built `Image`, `dtb`, `dtbo.img` in 3m 11s |
+| **Phase 6** | CPU Idle Management & cpuidle Subsystem | ⏳ **PENDING** | 0 / 98 | Ready to start |
 | **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ⏳ **PENDING** | 0 / 46 | Pending |
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Pending |
 | **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Pending |
@@ -136,6 +136,45 @@
 
 ---
 
+### Phase 5: Core Memory Management (SLUB, Page Allocator & ION Heaps) (67 Commits)
+
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `846e8e015005` | `7231e26c4` | Isaac J. Manjarres | ion: msm: Relocate MSM ION header directly to include/uapi/linux | Relocates UAPI header cleanly. |
+| `66decb3244a8` | `1c10d2fdc` | freak07 | Revert "bdi: Do not use freezable workqueue" | Clean cherry-pick. |
+| `81a876cfbd65` | `344d490d1` | Minchan Kim | Revert "mm: oom: enable the sysctl_reap_mem_on_sigkill by default" | Prevents memory corruptions during SIGKILL oom reaping. |
+| `4da45db06275` | `a97951b62` | Sultan Alsawaf | mm: Stop kswapd early when nothing's waiting for it to free pages | Saves CPU cycles by stopping redundant kswapd spinning. |
+| `d1f26682e5d9` | `1c7fecb53` | Vinayak Menon | mm: vmpressure: scale pressure based on reclaim context | Reclaim context pressure scaling. |
+| `26e091c53936` | `b469d8583` | Vinayak Menon | mm: vmpressure: account allocstalls only on higher pressures | Suppresses spurious pressure notifications on low allocations. |
+| `3f2d3366c24f` | `644234741` | Sultan Alsawaf | mm: vmpressure: Don't exclude any allocation types | Includes all allocation types for accurate memory pressure signaling. |
+| `441039d5274c` | `20fdc53d7` | Sultan Alsawaf | mm: vmpressure: Interpret zero scanned pages as 100% pressure | Fixes unhandled stall conditions. |
+| `68e91a4d889c` | `62d3c34e0` | Sultan Alsawaf | mm: vmpressure: Don't cache the window size | Simplifies window sizing. |
+| `1f45b9902b57` | `d6b1a8a7b` | Sultan Alsawaf | mm: Don't warn on page allocation failures for OOM-killed processes | Suppresses warning noise during process termination. |
+| `4e0a818b1b7c` | `c44f97b53` | Sultan Alsawaf | mm: vmpressure: Ignore allocation orders above PAGE_ALLOC_COSTLY_ORDER | Prevents spurious pressure spikes from high-order allocations. |
+| `2ab3d53a2863` | `936cf5e84` | Sultan Alsawaf | mm: Don't stop kswapd on a per-node basis when there are no waiters | Global kswapd wait accounting. |
+| `9c6d080b5fde` | `07a9bfdd6` | Sultan Alsawaf | mm: vmpressure: Don't export tunables to userspace | Locks internal vmpressure tuning. |
+| `d5a7cac80022` | `b70f88f26` | Sultan Alsawaf | mm: vmpressure: Ignore costly-order allocations for direct reclaim too | Consistently ignores costly orders across reclaim paths. |
+| `e3045e51995a` | `3bbd03965` | Sultan Alsawaf | mm: vmpressure: Fix a race that would erroneously clear accumulated data | Fixes data clearing race condition. |
+| `d23bdf5e9ac6` | `1185a9243` | Sultan Alsawaf | mm: vmpressure: Fix rampant inaccuracies caused by stale data usage | Restricts vmpressure tracking to active slowpath allocation failures. |
+| `bb8ee4662ec1` | `2df81dc43` | Sultan Alsawaf | mm: Increment kswapd_waiters for throttled direct reclaimers | Wakes up kswapd properly when direct reclaimers are throttled. |
+| `74820c663150` | `05d4ba63e` | Sultan Alsawaf | mm: Disable watermark boosting by default | Eliminates random frame drops and background app thrashing. |
+| `314381d5d9c4` | `248be1868` | Anshuman Khandual | mm/tlbbatch: introduce arch_tlbbatch_should_defer() | TLB batch deferral helper. |
+| `7460f3b906aa` | `d068ab9f5` | Sultan Alsawaf | mm: Move slab shrinkers into a dedicated thread called kshrinkd | Eliminates direct-reclaim slab shrinking latency from UI threads. |
+| `a5620e9b8ffe` | `c8071f2d0` | Sultan Alsawaf | iommu: msm: Rewrite to improve clarity and performance | Overhauls MSM IOMMU locking, removes lock hold times. |
+| `dbb21cd6ffe8` | `cd4727cfc` | Sultan Alsawaf | ion: Rewrite to improve clarity and performance | Eliminates debug locks, fine-grained locking & lockless DMA cache. |
+| `56c2698a34b3` | `b633de505` | Sultan Alsawaf | ion: Remove unneeded rwsem for the heap priority list | Eliminates heap priority list rwsem lock contention. |
+| `f5c6b755ce1f` | `30a8a5e0e` | Sultan Alsawaf | ion: Further optimize ioctl handler | Micro-optimizes fastpath ioctl commands. |
+| `c2ca2259fac7` | `df25e5c14` | Sultan Alsawaf | ion: Restore ION_IOC_HEAP_QUERY ioctl command | Restores userspace heap query compatibility. |
+| `f077bc6f1579` | `12189688a` | Sultan Alsawaf | ion: Fix partial cache maintenance operations | Fixes partial buffer range flush handling. |
+| `4cc96879e565` | `7f0647e96` | Sultan Alsawaf | ashmem: Rewrite to improve clarity and performance | Strips dead debug code, replaces bloated locks with fast mutexes. |
+| `b3563d87f1a6` | `eba9fbaf6` | Sean Du | usb: gadget: uvc: Avoid NULL pointer dereference after unbind | Fixes potential crash on unbind. |
+| `ede349c4a891` | `342ee9dd6` | Sean Du | usb: gadget: uvc: Fix potential UAF during unbind | Fixes UAF vulnerability in USB gadget driver. |
+| *Upstreamed* | `67b18e30f` – `b53ba6670` (30 commits) | Various | Multi-Gen LRU (MGLRU) full core suite & TLB batching | Already integrated in LineageOS 24.0 base. Skipped duplicate. |
+| *Skipped* | `0f7697e26` | Yu Zhao | mm:vmscan:Update the page scan prioritiy | Already present in LineageOS base. Skipped duplicate. |
+| *Skipped* | `fa3b2821f` – `6cc2e26c7` (7 commits) | Sean Du | Experimental MGLRU v15 refresh & followups | Skipped to preserve LineageOS's verified stable MGLRU implementation. |
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -149,9 +188,9 @@
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`31701b8d5918`)
+* **Branch:** `port` (`ede349c4a891`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 3m 19s (ThinLTO enabled)
+* **Build Time:** 3m 11s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0422.zip`
-  * **MD5 Checksum:** `dff0db25169b11307924f9039213dd8a`
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0440.zip`
+  * **MD5 Checksum:** `39097d3951a6d8c19b6d1c2876dcf76d`
