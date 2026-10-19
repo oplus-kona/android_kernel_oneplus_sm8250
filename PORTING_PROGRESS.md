@@ -16,8 +16,8 @@
 | **Phase 1** | Core ARM64 Architecture & Low-Level CPU Routines | ✅ **PASSED** | 14 / 14 | Built `Image`, `dtb`, `dtbo.img` in 1m 54s |
 | **Phase 2** | Core Kernel Synchronization, IPC & Android Binder | ✅ **PASSED** | 24 / 24 | ThinLTO build in 3m 03s, AnyKernel3 zip verified |
 | **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ✅ **PASSED** | 2 / 3 (1 skipped) | Built `Image`, `dtb`, `dtbo.img` in 1m 51s |
-| **Phase 4** | Storage, Filesystems & Block Layer | ⏳ **PENDING** | 0 / 20 | Pending |
-| **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ⏳ **PENDING** | 0 / 67 | Pending |
+| **Phase 4** | Storage, Filesystems & Block Layer | ✅ **PASSED** | 13 ported (4 base/prior, 1 skipped, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 3m 19s |
+| **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ⏳ **PENDING** | 0 / 67 | Ready to start |
 | **Phase 6** | CPU Idle Management & cpuidle Subsystem | ⏳ **PENDING** | 0 / 98 | Pending |
 | **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ⏳ **PENDING** | 0 / 46 | Pending |
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Pending |
@@ -108,6 +108,34 @@
 
 ---
 
+### Phase 4: Storage, Filesystems & Block Layer (20 Commits)
+
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `1692baa509e5` | `0ac596d7e` | kdrag0n | block: Disable I/O stats accounting by default. | Disables overhead for unused block devices. |
+| `51c108d8d01b` | `d26d11500` | celtare21 | block,cfq: Disable logging if trace is not enabled | Reduces logspam in CFQ I/O scheduler. |
+| `55335dd90a25` | `d8701f7e9` | mrsrimar22 | scsi: ufs: Squash revert product changes | Reverts single_release in debugfs, restores clock scaling, removes highprio gating. |
+| `6ff2ea8f92e4` | `08c3a6e42` | Sean Du | scsi: ufs: Compile out tracing | Eliminates trace overhead in UFS driver. |
+| `ff094a0cfe98` | `34d9aef30` | NeilBrown | VFS: use synchronize_rcu_expedited() in namespace_unlock() | 200x speedup in unmounting filesystems during shutdown. |
+| `51dc8c226f30` | `fe112b941` | Sultan Alsawaf | mbcache: Speed up cache entry creation | Eliminates hash-list scan contention in ext4 mbcache. |
+| `37b72ec647af` | `681cc6913` | Christoph Hellwig | BACKPORT: fs: refactor ksys_umount | Factors out path_umount helper. |
+| `c8114a91f1a8` | `fb171a761` | Christoph Hellwig | BACKPORT: fs: fix a struct path leak in path_umount | Fixes dentry and vfsmnt leaks in error cases. |
+| `74bd72f598a6` | `4f7dbaf72` | Al Viro | BACKPORT: umount(2): move the flag validity checks first | Restores userspace UMOUNT_NOFOLLOW check compatibility. |
+| `b1e5b3e2955e` | `07551352b` | Sultan Alsawaf | mm: Micro-optimize PID map reads for arm64 while retaining output format | 20x speedup in PID map reads for app GC. |
+| `98ca9304ccf9` | `b46f748b4` | Sultan Alsawaf | mm: Fix truncated major/minor output in PID maps | Extends major/minor hex formatting precision. |
+| `39998ee86c29` | `30494d998` | Sultan Alsawaf | sched: Add API to migrate the current process to a given cpumask | Ported from Phase 7 as dependency for PID map little core affinity. |
+| `31701b8d5918` | `f08ced31e` | Sultan Alsawaf | mm: Perform PID map reads on the little CPU cluster | Offloads heavy procfs map formatting to little cores. |
+| *Upstreamed* | `f27e49ee9` | Bart Van Assche | ANDROID: block: Improve shared tag set performance | Already in LineageOS base (`18722b1cac9f`). Skipped duplicate. |
+| *Upstreamed* | `7ecf3eec0` | Yu Zhao | FROMLIST: mm: multi-gen LRU: groundwork | Already in LineageOS base (`6da1a2795d60`). Skipped duplicate. |
+| *Upstreamed* | `eef128a05` | Sebastian Siewior | BACKPORT: mm: multi-gen LRU: move lru_gen_add_mm() out of IRQ-off region | Already in LineageOS base (`987e52cda24b`). Skipped duplicate. |
+| *Ported Phase 2*| `6a1e1c8ea`| Sean Du | binder: Checkout to android13-5.10-lts | Already ported in Phase 2 as `36fafa305898`. |
+| *Skipped* | `456df243d` | Sean Du | pstore: Reserve ramoops space for crash records | **Skipped**: Depends on hardcoded Xiaomi RAM address `0xB0000000`. OnePlus configures ramoops via devicetree. |
+| *Deferred* | `8e50cab1c` | Sultan Alsawaf | kernel: Boost DDR bus for a short amount of time when zygote forks | **Deferred to Phase 7**: Depends on `devfreq_boost.h` (`51e719e82e59`). |
+| *Deferred* | `5bd9a3fd7` | Sultan Alsawaf | kernel: Affine hwcomposer to big CPUs | **Deferred to Phase 7/8**: Follows zygote / devfreq boost stack. |
+| *Deferred* | `53afd5ad9` | Yuan Si | kernel: Affine surfaceflinger to perf cluster | **Deferred to Phase 7/8**: Follows hwcomposer affinity stack. |
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -121,9 +149,9 @@
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`12e6746f28f5`)
+* **Branch:** `port` (`31701b8d5918`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 1m 51s (ThinLTO enabled)
+* **Build Time:** 3m 19s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0409.zip`
-  * **MD5 Checksum:** `fd16ca5a33cd3175d28ade91e9e662e0`
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0422.zip`
+  * **MD5 Checksum:** `dff0db25169b11307924f9039213dd8a`
