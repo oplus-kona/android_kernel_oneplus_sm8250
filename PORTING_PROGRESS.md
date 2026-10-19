@@ -19,8 +19,8 @@
 | **Phase 4** | Storage, Filesystems & Block Layer | ✅ **PASSED** | 13 ported (4 base/prior, 1 skipped, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 3m 19s |
 | **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ✅ **PASSED** | 29 ported (30 base, 8 skipped) | Built `Image`, `dtb`, `dtbo.img` in 3m 11s |
 | **Phase 6** | CPU Idle Management & cpuidle Subsystem | ✅ **BOOTED** | 97 ported (1 skipped duplicate) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0458.zip`) |
-| **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ⏳ **PENDING** | 0 / 46 | Ready to start |
-| **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Pending |
+| **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ✅ **PASSED** | 46 ported (5 base/prior, 2 devfreq boost, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 2m 06s |
+| **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Ready to start |
 | **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Pending |
 | **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ⏳ **PENDING** | 0 / 111| Pending |
 | **Phase 11**| Peripheral Drivers, USB Gadget & Hardening | ⏳ **PENDING** | 0 / 20 | Pending |
@@ -192,6 +192,64 @@
 
 ---
 
+### Phase 7: Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency (46 Commits)
+
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `97866d1b8deb` | `e27db3b19` | Quentin Perret | sched: Fix UCLAMP_FLAG_IDLE setting | Clean cherry-pick. |
+| `6dc81ded8380` | `023b50cce` | Quentin Perret | ANDROID: sched: Make uclamp changes depend on CAP_SYS_NICE | Clean cherry-pick. |
+| `ad7968c2a25f` | `8807182d7` | Qais Yousef | sched/uclamp: Add a new sysctl to control RT default boost value | Resolved conflict in `kernel/fork.c`: added `sched_post_fork(p)` cleanly. |
+| `9ad12014f98e` | `94aed7dff` | Dietmar Eggemann | BACKPORT: sched/uclamp: Allow to reset a task uclamp constraint value | Clean cherry-pick. |
+| `6bde383e1c2c` | `f34fb8298` | Qais Yousef | sched/uclamp: Fix fits_capacity() check in feec() | Clean cherry-pick. |
+| `5bcc3eb5902d` | `cc75e7748` | Sean Du | sched/uclamp: Make WALT placement honor clamp restrictions | Clean cherry-pick. |
+| `5e5eca350430` | `e4354548e` | Qinglang Miao | sched/uclamp: Remove unnecessary mutex_init() | Clean cherry-pick. |
+| `6fb8dba53e66` | `5de2c26f2` | YueHaibing | sched: Remove unused inline function uclamp_bucket_base_value() | Clean cherry-pick. |
+| `878a4d10cf42` | `33d247c96` | Qais Yousef | Documentation/sysctl: Document uclamp sysctl knobs | Clean cherry-pick. |
+| `365054c7047d` | `5de0ee654` | Valentin Schneider | sched/debug: Add task uclamp values to SCHED_DEBUG procfs | Clean cherry-pick. |
+| `77f1ed08d3c3` | `a2f86b5d2` | Pavankumar Kondeti | sched/debug: Fix requested task uclamp values shown in procfs | Clean cherry-pick. |
+| `a2bbe7c10b3d` | `68e28ecb9` | Sean Du | sched/walt: Map legacy placement hints to uclamp | Clean cherry-pick. Maps schedtune hints to uclamp. |
+| `0d2ab7e358b6` | `e85df8092` | Lingutla Chandrasekhar | sched/fair: Ignore percpu threads for imbalance pulls | Clean cherry-pick. |
+| `50a175c7d4f5` | `9f1f58833` | Peter Zijlstra | sched/rt: Fix double enqueue caused by rt_effective_prio | Clean cherry-pick. |
+| `0f618fb4c852` | `362661b37` | Juri Lelli | sched/deadline: Fix BUG_ON condition for deboosted tasks | Clean cherry-pick. |
+| `e67b480c45f1` | `7d3c23296` | Sean Du | sched/cpufreq: Use uclamp for WALT schedutil requests | Clean cherry-pick. |
+| `5a3e27d71991` | `8e2174cbe` | Peter Zijlstra | sched/core: Optimize try_to_wake_up() for local wakeups | Resolved conflict in `sched/core.c`: preserved `CONFIG_SONY_SCHED` migration handling. |
+| `746dc0eec281` | `1150968cd` | Peter Zijlstra | sched/core: Fix preempt warning in ttwu | Clean cherry-pick. |
+| `cb3ee2ab2b19` | `6843797d1` | Peter Zijlstra | sched/core: Optimize ttwu() spinning on p->on_cpu | Resolved conflict in `ttwu_queue`: preserved `CONFIG_SONY_SCHED` migration calls. |
+| `949b418a8175` | `2f82b53b0` | Mel Gorman | sched/core: Offload wakee task activation if it the wakee is descheduling | Resolved conflict with `ttwu_queue_wakelist` rename. |
+| `15fdf6f91c0f` | `2fcf27a84` | Peter Zijlstra | smp: Optimize send_call_function_single_ipi() | Clean cherry-pick. |
+| `6e74f28aadcd` | `4201ace4c` | Peter Zijlstra | sched/core: Fix ttwu() race | Clean cherry-pick. |
+| `b730f92f7806` | `e1eeb93ef` | Peter Zijlstra | sched: Fix loadavg accounting race | Clean cherry-pick. |
+| `d3fe6b8c5439` | `a612d732a` | Peter Zijlstra | sched: Fix race against ptrace_freeze_trace() | Clean cherry-pick. |
+| `6a86feae094e` | `d46599696` | Peter Zijlstra | sched: Fix rq->nr_iowait ordering | Resolved conflict in `try_to_wake_up`: preserved `CONFIG_SONY_SCHED` and ordered iowait. |
+| `b56ea500c1b8` | `e835089ab` | Viresh Kumar | sched/core: Create task_has_idle_policy() helper | Clean cherry-pick. |
+| `c712937e850d` | `d82c9192b` | Viresh Kumar | sched/fair: Start tracking SCHED_IDLE tasks count in cfs_rq | Clean cherry-pick. |
+| `874856814770` | `02448f4b7` | Viresh Kumar | sched/fair: Fall back to sched-idle CPU if idle CPU isn't found | Clean cherry-pick. |
+| `c16e6ae9f387` | `a847f4f13` | Viresh Kumar | sched/fair: Make sched-idle CPU selection consistent throughout | Clean cherry-pick. |
+| `e817ca841f54` | `ff6e382b1` | Viresh Kumar | sched/fair: Load balance aggressively for SCHED_IDLE CPUs | Clean cherry-pick. |
+| `951c7a0c91fe` | `4a1948b7e` | Daniel Bristot de Oliveira | sched/rt: Disable RT_RUNTIME_SHARE by default | Clean cherry-pick. |
+| `48aa55ef5e1d` | `0784f3598` | Qais Yousef | sched/uclamp: Fix iowait boost escaping uclamp restriction | Clean cherry-pick. |
+| `ec5ed684378a` | `d161a16fb` | Sean Du | sched/uclamp: Keep zero-spare CPUs as EAS candidates | Clean cherry-pick. |
+| `b3b0c92a9338` | `747c9adcc` | Sean Du | sched/cputime: Bound scaled system time by runtime | Clean cherry-pick. |
+| `fb53e44a7af9` | `62fc4d64f` | Sultan Alsawaf | sched/fair: Compile out NUMA code entirely when NUMA is disabled | Clean cherry-pick. |
+| `f41821fb974d` | `c169de303` | Sultan Alsawaf | sched/fair: Always update CPU capacity when load balancing | Clean cherry-pick. |
+| `6ea26d7a61bf` | `6aa66266c` | utziacre | sched/core: Introduce Uclamp Assist | Clean cherry-pick. |
+| `1861e79324d6` | `0a7993da9` | Sean Du | sched: Fix uclamp assist string storage | Clean cherry-pick. |
+| `fe85124f7da3` | `4513df64c` | Sean Du | sched/uclamp: Restore unrestricted minimum clamp ceiling | Clean cherry-pick. |
+| `4915d09e69c7` | `51e719e82` | Sultan Alsawaf | devfreq: Introduce devfreq boost driver | Imported devfreq boost driver from Phase 11. Adapted DRM notify for Kona. |
+| `556754f4b474` | `48b2c87fb` | Sultan Alsawaf | devfreq_boost: Run boost kthreads on big CPU cluster | Pinned boost worker threads to big cores. |
+| `cc2afa902e68` | `8e50cab1c` | Sultan Alsawaf | kernel: Boost DDR bus for a short amount of time when zygote forks | Ported deferred commit from Phase 4. |
+| `ac24979aa994` | `5bd9a3fd7` | Sultan Alsawaf | kernel: Affine hwcomposer to big CPUs | Ported deferred commit from Phase 4. |
+| `2c7337db57ed` | `53afd5ad9` | Yuan Si | kernel: Affine surfaceflinger to perf cluster | Ported deferred commit from Phase 4. |
+| `1ac73bc64105` | `5352c74ec` | Sean Du | sched: Preserve perf affinity across cpuset migration | Resolved conflict in `sched.h`: retained `CONFIG_SONY_SCHED` ED task migration flag. |
+| `af1ebc97dedd` | `599c69f0e` | Sultan Alsawaf | cpufreq: Kill userspace CPU boosting entirely | Clean cherry-pick. |
+| *Upstreamed* | `25e2ce177` | Yu Zhao | FROMLIST: mm: multi-gen LRU: support page table walks | Already in base (`be322c927056`). Skipped duplicate. |
+| *Upstreamed* | `de7d7ecad` | Qais Yousef | sched/rt: Make RT capacity-aware | Already in base (`cdadd914440f`). Skipped duplicate. |
+| *Ported Phase 4* | `30494d998` | Sultan Alsawaf | sched: Add API to migrate the current process to a given cpumask | Ported in Phase 4 (`39998ee86c29`). |
+| *Ported Phase 2* | `fbdf3211d` | Sultan Alsawaf | kernel: Add tri-cluster API to affine IRQs and kthreads to fast CPUs | Ported in Phase 2 (`0f0ef40af8a4`). |
+| *Ported Phase 2* | `6f6502559` | Sultan Alsawaf | kernel: Extend the perf-critical API to little CPUs | Ported in Phase 2 (`da695ad3afa0`). |
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -199,16 +257,17 @@
 | `5f346a2d3705` | arm64: configs: Set LITTLE, BIG, and PRIME CPU masks for Kona | Configures `CONFIG_LITTLE_CPU_MASK=15`, `CONFIG_BIG_CPU_MASK=112`, `CONFIG_PRIME_CPU_MASK=128`. |
 | `fc586bf5d61d` | msm: kgsl: Cast KGSL_DMA_BIT_MASK to unsigned int in dma_set_max_seg_size | Fixes Clang -O3 constant-conversion warning. |
 | `9d613a3056f4` | arm64: configs: Enable CONFIG_THINLTO=y in oplus.config | Enables ThinLTO for 3-minute link times across 192 cores. |
+| `107ad33618cc` | arm64: configs: devfreq_boost: sched: Configure UCLAMP, devfreq boost, and adapt for Kona | Enables UCLAMP, Uclamp Assist, TEO, devfreq boost, disables SCHED_TUNE, and adapts DRM notifier to Kona. |
 
 ---
 
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`d889d347dc33`)
+* **Branch:** `port` (`107ad33618cc`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 1m 41s (ThinLTO enabled)
+* **Build Time:** 2m 06s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0458.zip`
-  * **MD5 Checksum:** `21f4ae86ec9f8df9461a5777a4a0ff51`
-* **Boot Verification:** Verified booted on OnePlus hardware by user.
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0517.zip`
+  * **MD5 Checksum:** `7388b28bdaeab987e271dd483ccd410f`
+
