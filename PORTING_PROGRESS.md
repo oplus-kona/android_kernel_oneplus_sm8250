@@ -347,18 +347,19 @@
 | `bb34c866ff78` | simple_lmk: Allow Simple LMK and memcg to coexist | Allows Simple LMK to manage global pressure without conflicting with memcg OOM. |
 | `52e539023ce8` | arm64: configs: Enable Simple LMK, ZRAM writeback, and disable PSI | Configures `CONFIG_ANDROID_SIMPLE_LMK=y`, `CONFIG_ZRAM=y`, `CONFIG_ZRAM_WRITEBACK=y`, disables `CONFIG_PSI`. |
 | `719e84525a0c` | Revert "gpu: msm: Compile out tracing" | Restores unconditional compilation of kgsl_trace objects to prevent undefined symbols when CONFIG_DEBUG_KERNEL is unforced. |
+| `30ceb49281d7` | Revert "init: Kconfig: Don't force DEBUG_KERNEL when EXPERT is enabled" | Restores forced DEBUG_KERNEL under EXPERT, ensuring BPF_EVENTS, KPROBE_EVENTS, and bpf_trace.o are built for Android BpfLoader and libmeminfo. |
 
 ---
 
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`719e84525a0c`)
+* **Branch:** `port` (`30ceb49281d7`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 1m 12s (ThinLTO enabled)
+* **Build Time:** 2m 25s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0612.zip`
-  * **MD5 Checksum:** `2c0f57592da082825226e254d5c05b97`
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0631.zip`
+  * **MD5 Checksum:** `4852c0b8ff2bd05b26c85f0bdc0f5a68`
 * **Boot Verification:** Ready for user hardware testing.
 
 
