@@ -189,11 +189,14 @@ static int msm_drm_notifier_cb(struct notifier_block *nb,
 			       unsigned long action, void *data)
 {
 	struct df_boost_drv *d = container_of(nb, typeof(*d), msm_drm_notif);
-	int i, *blank = ((struct msm_drm_notifier *)data)->data;
+	struct msm_drm_notifier *evdata = data;
+	int i, *blank;
 
 	/* Parse DRM blank events as soon as they occur */
-	if (action != MSM_DRM_EARLY_EVENT_BLANK)
+	if (action != MSM_DRM_EARLY_EVENT_BLANK || !evdata || !evdata->data)
 		return NOTIFY_OK;
+
+	blank = evdata->data;
 
 	/* Boost when the screen turns on and unboost when it turns off */
 	for (i = 0; i < DEVFREQ_MAX; i++) {

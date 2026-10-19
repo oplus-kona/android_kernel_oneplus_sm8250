@@ -3456,7 +3456,7 @@ unsigned int sched_get_group_id(struct task_struct *p)
 	return group_id;
 }
 
-#if defined(CONFIG_SCHED_TUNE)
+#if defined(CONFIG_SCHED_WALT)
 /*
  * We create a default colocation group at boot. There is no need to
  * synchronize tasks between cgroups at creation time because the
