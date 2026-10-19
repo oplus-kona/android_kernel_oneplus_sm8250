@@ -3144,8 +3144,6 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags,
 #else
 	ttwu_queue(p, cpu, wake_flags);
 #endif
-stat:
-	ttwu_stat(p, cpu, wake_flags);
 unlock:
 	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
 out:
