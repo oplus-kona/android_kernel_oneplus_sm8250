@@ -20,8 +20,8 @@
 | **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ✅ **PASSED** | 29 ported (30 base, 8 skipped) | Built `Image`, `dtb`, `dtbo.img` in 3m 11s |
 | **Phase 6** | CPU Idle Management & cpuidle Subsystem | ✅ **BOOTED** | 97 ported (1 skipped duplicate) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0458.zip`) |
 | **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ✅ **BOOTED** | 46 ported (5 base/prior, 2 devfreq boost, 3 deferred) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0517.zip`) |
-| **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Ready to start |
-| **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Pending |
+| **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ✅ **PASSED** | 23 / 23 | Built `Image`, `dtb`, `dtbo.img` in 1m 31s |
+| **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Ready to start |
 | **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ⏳ **PENDING** | 0 / 111| Pending |
 | **Phase 11**| Peripheral Drivers, USB Gadget & Hardening | ⏳ **PENDING** | 0 / 20 | Pending |
 
@@ -250,6 +250,36 @@
 
 ---
 
+### Phase 8: Display & Graphics (MSM DRM KMS & Adreno KGSL GPU) (23 Commits)
+
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `f09b3d43f0a4` | `d1bfa49dc` | Hareesh Gundu | BACKPORT: msm: kgsl: Add support to get gpu model from device tree | Clean cherry-pick. |
+| `2826e30c9157` | `fee5f157f` | Hareesh Gundu | BACKPORT: msm: kgsl: Add a property to query gpu model name | Clean cherry-pick. |
+| `59825090ab79` | `ae22baa1b` | Hareesh Gundu | BACKPORT: msm: kgsl: Add support for KGSL_PROP_VK_DEVICE_ID | Clean cherry-pick. |
+| `c90a0c9e5e2c` | `d3b2ed133` | Adrian Salido | drm/msm: dsi-ctrl: remove extra buffer copy | Removed intermediate buffer copy in dsi_message_tx while preserving Iris5 chip support. |
+| `45553afb0715` | `87d17ab51` | Danny Lin | drm/msm/sde: Cache register values when performing clock control. | Clean cherry-pick. |
+| `0de7763d5689` | `a13817936` | Juhyung Park | drm: msm: do not send fps change events to notifier listeners | Clean cherry-pick. |
+| `a7345c4ac8ac` | `a921eed9b` | wanggl3 | gpu/msm/adreno-gpulist: Shmem becomes bigger and bigger when launch apps | Clean cherry-pick. |
+| `e03ae1ccd735` | `122f274fc` | Kazuki Hashimoto | Revert "devfreq: Restrict gpu governors to gpu devfreq devices" | Clean cherry-pick. |
+| `826b59190a5b` | `d2b53f680` | Kristof Petho | techpack: display: Shutdown subtree debug logging and dmesg pollution | Clean cherry-pick. |
+| `9dacd2840c9d` | `647922ebf` | Kazuki H | techpack: display: Drop debug register reads | Clean cherry-pick. |
+| `40e8d13e553a` | `29876fb4c` | Kazuki Hashimoto | techpack: display: Remove spinlock in idle_state_show | Clean cherry-pick. |
+| `7f2ae27eef67` | `6403fb1b0` | Danny Lin | disp: msm: Disable unused and debug config options | Clean cherry-pick. |
+| `0ec5705c106c` | `94311158c` | Sultan Alsawaf | drm/msm/sde: Skip unneeded register reads when getting write line count | Clean cherry-pick. |
+| `4eaf3eb4864e` | `18b410d3f` | Sultan Alsawaf | drm/msm/sde: Remove debug print from sde_reg_write() | Clean cherry-pick. |
+| `25aabd3b8029` | `0a9975932` | Sultan Alsawaf | drm/msm/sde: Stub out debug log macros and compile them out | Clean cherry-pick. |
+| `8b7abd3b150a` | `2e0aaf8a2` | Yaroslav Furman | techpack: sde: remove sde debugging | Clean cherry-pick. |
+| `c6b2071d4cc0` | `8cf48bbf9` | spakkkk | Revert "msm: kgsl: Add gpu_frequency tracepoint to power trace system" | Clean cherry-pick. |
+| `f9f8b1ed4e5e` | `d0aa6e99a` | spakkkk | Revert "msm: kgsl: Add gpu_frequency trace during SLUMBER entry and exit" | Clean cherry-pick. |
+| `74bb296a63e9` | `1f04e5bdd` | Danny Lin | gpu: adreno: only compile Adreno 6xx driver | Clean cherry-pick. Only targets Kona Adreno 650. |
+| `bd1c615b8f19` | `cefcc3e68` | celtare21 | gpu: msm: Compile out tracing | Clean cherry-pick. |
+| `8bea312609fe` | `f9d0be94e` | Kazuki Hashimoto | drm: Stub out debug prints | Clean cherry-pick. |
+| `7c9e145766c5` | `2bfea4f9d` | Sultan Alsawaf | drm: Boost DDR bus upon running an atomic ioctl | Resolved conflict in `drm_atomic.c`: hooked DDR boost to atomic frame commits. |
+| `eb493d39dbfb` | `e06e2be0e` | Sultan Alsawaf | disp: msm: Affine important kthreads to the prime CPU cluster | Clean cherry-pick. Places display kthreads on Kryo 585 prime core. |
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -258,17 +288,17 @@
 | `fc586bf5d61d` | msm: kgsl: Cast KGSL_DMA_BIT_MASK to unsigned int in dma_set_max_seg_size | Fixes Clang -O3 constant-conversion warning. |
 | `9d613a3056f4` | arm64: configs: Enable CONFIG_THINLTO=y in oplus.config | Enables ThinLTO for 3-minute link times across 192 cores. |
 | `107ad33618cc` | arm64: configs: devfreq_boost: sched: Configure UCLAMP, devfreq boost, and adapt for Kona | Enables UCLAMP, Uclamp Assist, TEO, devfreq boost, disables SCHED_TUNE, and adapts DRM notifier to Kona. |
+| `494af2e3794c` | techpack: display: dsi_ctrl: Fix syntax error in dsi_message_tx | Restored missing if condition in dsi_ctrl.c. |
 
 ---
 
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`107ad33618cc`)
+* **Branch:** `port` (`494af2e3794c`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 2m 06s (ThinLTO enabled)
+* **Build Time:** 1m 31s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0517.zip`
-  * **MD5 Checksum:** `7388b28bdaeab987e271dd483ccd410f`
-* **Boot Verification:** Verified booted on OnePlus hardware by user.
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0527.zip`
+  * **MD5 Checksum:** `68c76ee1f2a0868df2452d62fa302fd2`
 
