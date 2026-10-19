@@ -22,7 +22,7 @@
 | **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ✅ **BOOTED** | 46 ported (5 base/prior, 2 devfreq boost, 3 deferred) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0517.zip`) |
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ✅ **BOOTED** | 23 / 23 | Booted on hardware (`zenkernel-oplus-sm8250-261020-0527.zip`) |
 | **Phase 9** | Multimedia, Audio & Networking | ✅ **BOOTED** | 7 / 7 | Booted on hardware (`zenkernel-oplus-sm8250-261020-0536.zip`) |
-| **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ⏳ **PENDING** | 0 / 111| Pending |
+| **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ✅ **PASSED** | 98 ported (13 base, 1 adaptation) | Built `Image`, `dtb`, `dtbo.img` in 3m 12s (`zenkernel-oplus-sm8250-261020-0602.zip`) |
 | **Phase 11**| Peripheral Drivers, USB Gadget & Hardening | ⏳ **PENDING** | 0 / 20 | Pending |
 
 ---
@@ -294,6 +294,23 @@
 
 ---
 
+### Phase 10: Simple LMK & ZRAM Swap Compression Stack (111 Commits Total)
+
+* **Compression & ZRAM Improvements (63 Commits):**
+  * **13 Base / Upstream Commits:** LZO-RLE engine (`#230` - `#239`), crypto buffer overrun fixes (`#240`), and ZRAM default to LZO-RLE (`#243`) verified already integrated into `lineage-24.0`.
+  * **2 Fast Copy Commits:** `2cae00b99171` (`753396a79`) and `3f83a3bdf23c` (`3d44f3fa4`) optimize ZRAM and Zsmalloc with `copy_page()`.
+  * **19 ZRAM Driver Commits:** `e0191cca62dd` through `8a7dfbf7bc02` (`#244` - `#262`) port idle/writeback handling, same-element page deduplication, UAF fix, and cmpxchg max accounting.
+  * **27 ZSTD 1.5.7 Upstream Stack Commits:** `21299e52deec` through `82674c44455d` (`#263` - `#289`) port the complete modern ZSTD v1.5.7 engine, Samsung optimizations, and dictionary support.
+  * **1 ZRAM Disksize Tuning:** `e21baec5b1e3` (`c231203ae`) sets default disksize to 4GB.
+
+* **Simple LMK Engine & Pressure Hooks (48 Commits):**
+  * **Core Engine & Tunings:** `b2313589ebfc` through `71203c3ab8d4` (`#291` - `#351`) introduce Sultan Alsawaf's complete Simple LMK driver, replacing userspace lmkd with deterministic in-kernel memory reclamation.
+  * **MGLRU Integration:** `838f1534598f` (`3110db85d`) ensures reliable triggering when MGLRU is active.
+  * **Big Core CPU Affinity:** `f258f65b3e25` (`b486e59fe`) runs reaper and reclaim threads on Kryo 585 big CPU cluster.
+  * **MEMCG Coexistence:** `bb34c866ff78` adapts Simple LMK to cleanly coexist with native memcg container OOM accounting.
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -303,18 +320,21 @@
 | `9d613a3056f4` | arm64: configs: Enable CONFIG_THINLTO=y in oplus.config | Enables ThinLTO for 3-minute link times across 192 cores. |
 | `107ad33618cc` | arm64: configs: devfreq_boost: sched: Configure UCLAMP, devfreq boost, and adapt for Kona | Enables UCLAMP, Uclamp Assist, TEO, devfreq boost, disables SCHED_TUNE, and adapts DRM notifier to Kona. |
 | `494af2e3794c` | techpack: display: dsi_ctrl: Fix syntax error in dsi_message_tx | Restored missing if condition in dsi_ctrl.c. |
+| `bb34c866ff78` | simple_lmk: Allow Simple LMK and memcg to coexist | Allows Simple LMK to manage global pressure without conflicting with memcg OOM. |
+| `52e539023ce8` | arm64: configs: Enable Simple LMK, ZRAM writeback, and disable PSI | Configures `CONFIG_ANDROID_SIMPLE_LMK=y`, `CONFIG_ZRAM=y`, `CONFIG_ZRAM_WRITEBACK=y`, disables `CONFIG_PSI`. |
 
 ---
 
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`8d6e00d2476c`)
+* **Branch:** `port` (`52e539023ce8`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 1m 33s (ThinLTO enabled)
+* **Build Time:** 3m 12s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0536.zip`
-  * **MD5 Checksum:** `2a7fa3e96c57c94d839ae47aed9c03cc`
-* **Boot Verification:** Verified booted on OnePlus hardware by user.
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0602.zip`
+  * **MD5 Checksum:** `371dfae05bfa5c2f7d0b95e55daac10c`
+* **Boot Verification:** Ready for user hardware testing.
+
 
 
