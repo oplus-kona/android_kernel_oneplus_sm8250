@@ -19,7 +19,7 @@
 | **Phase 4** | Storage, Filesystems & Block Layer | ✅ **PASSED** | 13 ported (4 base/prior, 1 skipped, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 3m 19s |
 | **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ✅ **PASSED** | 29 ported (30 base, 8 skipped) | Built `Image`, `dtb`, `dtbo.img` in 3m 11s |
 | **Phase 6** | CPU Idle Management & cpuidle Subsystem | ✅ **BOOTED** | 97 ported (1 skipped duplicate) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0458.zip`) |
-| **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ✅ **PASSED** | 46 ported (5 base/prior, 2 devfreq boost, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 2m 06s |
+| **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ✅ **BOOTED** | 46 ported (5 base/prior, 2 devfreq boost, 3 deferred) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0517.zip`) |
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Ready to start |
 | **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Pending |
 | **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ⏳ **PENDING** | 0 / 111| Pending |
@@ -270,4 +270,5 @@
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
 * **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0517.zip`
   * **MD5 Checksum:** `7388b28bdaeab987e271dd483ccd410f`
+* **Boot Verification:** Verified booted on OnePlus hardware by user.
 
