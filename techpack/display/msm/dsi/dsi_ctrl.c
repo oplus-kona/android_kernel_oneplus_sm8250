@@ -1477,6 +1477,7 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 	if ((msg->flags & MIPI_DSI_MSG_LASTCOMMAND))
 		packet.header[3] |= BIT(7);//set the last cmd bit in header.
 
+	if (*flags & DSI_CTRL_CMD_FETCH_MEMORY) {
 #if defined(OPLUS_FEATURE_PXLW_IRIS5)
 		if (!iris_is_chip_supported())
 			msm_gem_sync(dsi_ctrl->tx_cmd_buf);
