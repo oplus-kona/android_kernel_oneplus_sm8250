@@ -15,7 +15,7 @@
 | **Phase 0** | Build Infrastructure, Clang Toolchain & Headers | ✅ **PASSED** | 9 / 9 | Verified via `headers_install` & `scripts` |
 | **Phase 1** | Core ARM64 Architecture & Low-Level CPU Routines | ✅ **PASSED** | 14 / 14 | Built `Image`, `dtb`, `dtbo.img` in 1m 54s |
 | **Phase 2** | Core Kernel Synchronization, IPC & Android Binder | ✅ **PASSED** | 24 / 24 | ThinLTO build in 3m 03s, AnyKernel3 zip verified |
-| **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ⏳ **PENDING** | 0 / 3 | Ready to start |
+| **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ✅ **PASSED** | 2 / 3 (1 skipped) | Built `Image`, `dtb`, `dtbo.img` in 1m 51s |
 | **Phase 4** | Storage, Filesystems & Block Layer | ⏳ **PENDING** | 0 / 20 | Pending |
 | **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ⏳ **PENDING** | 0 / 67 | Pending |
 | **Phase 6** | CPU Idle Management & cpuidle Subsystem | ⏳ **PENDING** | 0 / 98 | Pending |
@@ -98,6 +98,16 @@
 
 ---
 
+### Phase 3: Qualcomm Kona / SM8250 Common SoC DTSI (3 Commits)
+
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `639576444b0d` | `734fc07b1` | Yumi Yukimura | ARM: dts: msm: kona: Ignore SSR failure for modem | Clean cherry-pick. Prevents reboot loops on non-fatal modem subsystem restarts. |
+| `12e6746f28f5` | `8c9275c3a` | Danny Lin | arm64: dts: sm8250: Disable broken IRQ detection | Adds `noirqdebug` to chosen bootargs to eliminate redundant interrupt handling overhead. |
+| *Skipped* | `e7a16c5e3` | Sebastiano Barezzi | Revert "arm64: dts: vendor: qcom: Remove unused conflicting disp_rdump_memory region" | **Skipped**: In OnePlus DTS, address `0x9c000000` is already reserved for `cont_splash_region@9c000000`. Re-adding `disp_rdump_region@9c000000` creates memory collision. |
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -111,9 +121,9 @@
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`9d613a3056f4`)
+* **Branch:** `port` (`12e6746f28f5`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 3m 03s (ThinLTO enabled)
+* **Build Time:** 1m 51s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0356.zip`
-  * **MD5 Checksum:** `745eb6cb858c727685f24051173613db`
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0409.zip`
+  * **MD5 Checksum:** `fd16ca5a33cd3175d28ade91e9e662e0`
