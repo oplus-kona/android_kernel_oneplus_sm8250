@@ -23,7 +23,7 @@
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ✅ **BOOTED** | 23 / 23 | Booted on hardware (`zenkernel-oplus-sm8250-261020-0527.zip`) |
 | **Phase 9** | Multimedia, Audio & Networking | ✅ **BOOTED** | 7 / 7 | Booted on hardware (`zenkernel-oplus-sm8250-261020-0536.zip`) |
 | **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ✅ **PASSED** | 98 ported (13 base, 1 adaptation) | Built `Image`, `dtb`, `dtbo.img` in 3m 12s (`zenkernel-oplus-sm8250-261020-0602.zip`) |
-| **Phase 11**| Peripheral Drivers, USB Gadget & Hardening | ⏳ **PENDING** | 0 / 20 | Pending |
+| **Phase 11**| Peripheral Drivers, USB Gadget & Hardening | ✅ **PASSED** | 13 ported (8 base/prior) | Built `Image`, `dtb`, `dtbo.img` in 1m 12s (`zenkernel-oplus-sm8250-261020-0612.zip`) |
 
 ---
 
@@ -311,6 +311,30 @@
 
 ---
 
+### Phase 11: Peripheral Drivers, KernelSU & Misc Utilities (20 Commits Total)
+
+* **Base / Prior Integrations (8 Commits):**
+  * `5b390ef61` and `7772bf70c` (LRU list addition/deletion and folding helpers) ported in Phase 5.
+  * `51e719e82` and `48b2c87fb` (Devfreq Boost driver and big CPU cluster affinity) ported in Phase 7.
+  * `df5f03209` and `83e73d0d8` (Fake uname support from 5.4 to 6.12) already integrated in base `lineage-24.0` (`00795a1a8a03`).
+  * `1c8ca27e6` and `fc3f02a43` (KernelSU) integrated via upstream `drivers/kernelsu` submodule (`rsuntk/KernelSU`).
+
+* **Ported Peripheral & Logging Optimization Commits (12 Commits):**
+  * `397ef8b493b6` (`8d31ca153`): `clk: qcom: mdss: Fix tons of memory leaks`
+  * `3c4964c392a2` (`396a7e097`): `init: Kconfig: Don't force DEBUG_KERNEL when EXPERT is enabled`
+  * `12be35914b96` (`644004a00`): `soc: qcom: rpmh-rsc: Include module header`
+  * `70d818aaf415` (`3d9b2948d`): `qcacmn: Demote unwanted logging to debug [2/2]`
+  * `232fba1f727c` (`1285c56ea`): `msm: bus_arb: Disable debug logging.`
+  * `1c9db9a81a15` (`a6a264287`): `dma-buf/sync_file: Speed up ioctl by omitting debug names`
+  * `f90503a8a06d` (`640b61d3d`): `power: Silence debug logging`
+  * `0131dd32de5d` (`bf1d1dd5a`): `msm: msm_bus: Never compile debugfs-related code`
+  * `10cd81ef5a19` (`cdab1b5a6`): `msm: msm_bus: Kill transaction logging functionality`
+  * `38ecbd3bf6b2` (`451ea3632`): `msm_bus: remove tracer`
+  * `4c1a0b44a4f0` (`706694f95`): `uid_sys_stats: Remove dependency on the profiling subsystem`
+  * `3d18e9197b9a` (`a47ce9904`): `include: uapi: Regen kernel headers`
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -322,19 +346,21 @@
 | `494af2e3794c` | techpack: display: dsi_ctrl: Fix syntax error in dsi_message_tx | Restored missing if condition in dsi_ctrl.c. |
 | `bb34c866ff78` | simple_lmk: Allow Simple LMK and memcg to coexist | Allows Simple LMK to manage global pressure without conflicting with memcg OOM. |
 | `52e539023ce8` | arm64: configs: Enable Simple LMK, ZRAM writeback, and disable PSI | Configures `CONFIG_ANDROID_SIMPLE_LMK=y`, `CONFIG_ZRAM=y`, `CONFIG_ZRAM_WRITEBACK=y`, disables `CONFIG_PSI`. |
+| `719e84525a0c` | Revert "gpu: msm: Compile out tracing" | Restores unconditional compilation of kgsl_trace objects to prevent undefined symbols when CONFIG_DEBUG_KERNEL is unforced. |
 
 ---
 
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`52e539023ce8`)
+* **Branch:** `port` (`719e84525a0c`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 3m 12s (ThinLTO enabled)
+* **Build Time:** 1m 12s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0602.zip`
-  * **MD5 Checksum:** `371dfae05bfa5c2f7d0b95e55daac10c`
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0612.zip`
+  * **MD5 Checksum:** `2c0f57592da082825226e254d5c05b97`
 * **Boot Verification:** Ready for user hardware testing.
+
 
 
 
