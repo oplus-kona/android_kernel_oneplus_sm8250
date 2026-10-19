@@ -21,7 +21,7 @@
 | **Phase 6** | CPU Idle Management & cpuidle Subsystem | ✅ **BOOTED** | 97 ported (1 skipped duplicate) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0458.zip`) |
 | **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ✅ **BOOTED** | 46 ported (5 base/prior, 2 devfreq boost, 3 deferred) | Booted on hardware (`zenkernel-oplus-sm8250-261020-0517.zip`) |
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ✅ **BOOTED** | 23 / 23 | Booted on hardware (`zenkernel-oplus-sm8250-261020-0527.zip`) |
-| **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Ready to start |
+| **Phase 9** | Multimedia, Audio & Networking | ✅ **PASSED** | 7 / 7 | Built `Image`, `dtb`, `dtbo.img` in 1m 33s (`zenkernel-oplus-sm8250-261020-0536.zip`) |
 | **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ⏳ **PENDING** | 0 / 111| Pending |
 | **Phase 11**| Peripheral Drivers, USB Gadget & Hardening | ⏳ **PENDING** | 0 / 20 | Pending |
 
@@ -280,6 +280,20 @@
 
 ---
 
+### Phase 9: Multimedia, Audio & Networking (7 Commits)
+
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `9d322121ce37` | `363b763cb` | Rizky Benggolo | techpack: audio: Optimize audio codec | Clean cherry-pick. Applies `-O3` and loop unrolling to audio codecs. |
+| `6dbceadecc3e` | `38a615b20` | Kazuki H | cnss2: Don't register ramdump driver | Clean cherry-pick. Eliminates unnecessary kernel ramdump registration on Wi-Fi failure. |
+| `33349c2430a1` | `a59896279` | Adam W. Willis | qcacld-3.0: Demote unwanted logging to debug [1/2] | Clean cherry-pick. Silences excessive Wi-Fi diagnostic spam. |
+| `6f93da1ca649` | `038f57ca9` | Sultan Alsawaf | qcacld-3.0: Disable PM QoS usage | Clean cherry-pick. Disables Wi-Fi driver PM QoS latency voting. |
+| `1229f267fd7b` | `248d77778` | UtsavBalar1231 | ASoC: lsm: Do not create any wakeup_source for keyword detection | Resolved conflict in `msm-lsm-client.c`: cleanly removed `ws` wakeup source without importing Xiaomi-specific machine ifdefs. |
+| `a0f66385c1ee` | `11e3efed7` | franciscofranco | msm: vidc: Disable debug logs | Clean cherry-pick. Silences verbose video decoder debug messages. |
+| `8d6e00d2476c` | `4a3b690f6` | Sean Du | net: wireless: Sync db.txt with wens/wireless-regdb | Clean cherry-pick. Updates regulatory domain limits for 802.11ac/ax. |
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -295,11 +309,12 @@
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`494af2e3794c`)
+* **Branch:** `port` (`8d6e00d2476c`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 1m 31s (ThinLTO enabled)
+* **Build Time:** 1m 33s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0527.zip`
-  * **MD5 Checksum:** `68c76ee1f2a0868df2452d62fa302fd2`
-* **Boot Verification:** Verified booted on OnePlus hardware by user.
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0536.zip`
+  * **MD5 Checksum:** `2a7fa3e96c57c94d839ae47aed9c03cc`
+* **Boot Verification:** Ready for user hardware testing.
+
 
