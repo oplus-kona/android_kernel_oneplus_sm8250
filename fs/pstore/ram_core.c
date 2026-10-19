@@ -463,11 +463,12 @@ static void *persistent_ram_iomap(phys_addr_t start, size_t size,
 		unsigned int memtype)
 {
 	void *va;
+	bool has_region = true;
 
 	if (!request_mem_region(start, size, "persistent_ram")) {
-		pr_err("request mem region (0x%llx@0x%llx) failed\n",
+		pr_warn("request mem region (0x%llx@0x%llx) failed - falling back to ioremap\n",
 			(unsigned long long)size, (unsigned long long)start);
-		return NULL;
+		has_region = false;
 	}
 
 	if (memtype)
@@ -476,7 +477,7 @@ static void *persistent_ram_iomap(phys_addr_t start, size_t size,
 		va = ioremap_wc(start, size);
 
 	/* We must release the mem region if ioremap fails. */
-	if (!va)
+	if (!va && has_region)
 		release_mem_region(start, size);
 
 	/*
