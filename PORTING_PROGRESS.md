@@ -3,7 +3,7 @@
 > **Target Kernel:** `android_kernel_oneplus_sm8250` (OnePlus 8 / 8 Pro / 8T / 9R)  
 > **Source Kernel:** `YumeMichi/kernel_xiaomi_pipa` (Xiaomi Pad 6, Linux 4.19)  
 > **Porting Branch:** `port` (branched from clean `origin/lineage-24.0` at `5d98df1d1625`)  
-> **Toolchain:** `Neutron-Clang` (with Clang -O3, LTO, and ccache)  
+> **Toolchain:** `Neutron-Clang` (with Clang -O3, ThinLTO, and ccache)  
 > **Build Script:** `compile.sh`
 
 ---
@@ -14,8 +14,8 @@
 | :---: | :--- | :---: | :---: | :---: |
 | **Phase 0** | Build Infrastructure, Clang Toolchain & Headers | ✅ **PASSED** | 9 / 9 | Verified via `headers_install` & `scripts` |
 | **Phase 1** | Core ARM64 Architecture & Low-Level CPU Routines | ✅ **PASSED** | 14 / 14 | Built `Image`, `dtb`, `dtbo.img` in 1m 54s |
-| **Phase 2** | Core Kernel Synchronization, IPC & Android Binder | ⏳ **PENDING** | 0 / 23 | Ready to start |
-| **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ⏳ **PENDING** | 0 / 3 | Pending |
+| **Phase 2** | Core Kernel Synchronization, IPC & Android Binder | ✅ **PASSED** | 24 / 24 | ThinLTO build in 3m 03s, AnyKernel3 zip verified |
+| **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ⏳ **PENDING** | 0 / 3 | Ready to start |
 | **Phase 4** | Storage, Filesystems & Block Layer | ⏳ **PENDING** | 0 / 20 | Pending |
 | **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ⏳ **PENDING** | 0 / 67 | Pending |
 | **Phase 6** | CPU Idle Management & cpuidle Subsystem | ⏳ **PENDING** | 0 / 98 | Pending |
@@ -66,22 +66,54 @@
 
 ---
 
-### Additional Prerequisite & Integration Patches
+### Phase 2: Core Kernel Synchronization, IPC & Android Binder (24 Commits)
 
-| Target Commit SHA | Author | Subject | Resolution / Notes |
-| :--- | :--- | :--- | :--- |
-| `661ef52ee840` | Barry Song | mm/tlbbatch: rename and extend some functions | Required prerequisite for batched TLB shootdown in `mm/rmap.c`. |
-| `811c405f1ffe` | Yicong Yang | mm/tlbbatch: Introduce arch_flush_tlb_batched_pending() | Required prerequisite for batched TLB shootdown. |
-| `36324465e33a` | Pair Programmer | mm/rmap: Use flush_tlb_mm directly in flush_tlb_batched_pending | Resolved build conflict to align with Ryan Roberts' upstream simplification. |
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `cbb6a0edfb01` | `174619aa7` | Sultanxda | printk: Add sleep time to timestamps | Monotonic kmsg timestamps include suspend time. |
+| `c745df35847f` | `5ee3be9b16d` | Danny Lin | printk: Add sleep time offset to all timestamps | Clean cherry-pick. |
+| `3d5a4647c5a1` | `463319c80` | Park Ju Hyung | trace: add a CONFIG_DISABLE_TRACE_PRINTK option | Exposes trace_printk disabling option. |
+| `66ae7d77610a` | `0fe4ace19` | Yaroslav Furman | techpack: audio: pinctrl-lpi: Initialise at late_initcall | Fixes NULL dereference when audio techpack modules are built-in. |
+| `136d349a4c59` | `4da1a385e` | Tyler Nijmeh | net: Allow BPF JIT to compile without module support | Clean cherry-pick. |
+| `c6a57ce06eb4` | `ce82c91bd` | Tyler Nijmeh | selinux: Allow audit to be disabled | Decouples SELinux from CONFIG_AUDIT in Kconfig. |
+| `3b9a93f1a88e` | `b2dd15bd6` | Sean Du | bpf: lsm: Compile out tracing | Clean cherry-pick. |
+| `ef72a3181ff8` | `47ec1acda` | Sultan Alsawaf | PM / devfreq: Make the monitor workqueue high priority | Reduces devfreq sampling jitter. |
+| `a279d245c671` | `09d390c79` | Sultan Alsawaf | cpumask: Add cpumasks for big, LITTLE, and prime CPU clusters | Adds cluster topology masks. |
+| `5440c81203fd` | `28cf4d7c9` | Sultan Alsawaf | msm: kgsl: Affine kgsl_3d0_irq and worker kthread to the big CPU cluster | Accelerates GPU command completion and dispatch. |
+| `2ec9cfd9ff68` | `ecc0cd171` | Sultan Alsawaf | drm: Affine IRQ to the prime CPU cluster | Places display VSYNC interrupt on prime core. |
+| `bd8d85544e11` | `6ab6e02e2` | Sultan Alsawaf | workqueue: Affine unbound workqueues to little CPUs by default | Battery saving: background tasks remain on silver cores. |
+| `c7b7f910742c` | `50e5743a0` | Sultan Alsawaf | rcu: Run nocb kthreads on little CPUs | Moves RCU callback offloads to little cores. |
+| `a9ad547494f4` | `43f60431b` | Jaskaran Singh | ANDROID: Configure out the macros in android_kabi and android_vendor | Adds CONFIG_ANDROID_KABI_RESERVE. |
+| `ea60a70bf657` | `f39729602` | Danny Lin | profiling: Implement a simple task exit notifier when disabled | Lightweight fallback for task exit hooks. |
+| `d973569cca1d` | `87c792a54` | NeilBrown | BACKPORT: cred: add get_cred_rcu() | Clean cherry-pick. |
+| `36fafa305898` | `6a1e1c8ea` | Sean Du | binder: Checkout to android13-5.10-lts | Android 13 5.10-LTS modern Binder IPC core. |
+| `1e0f41b03d1d` | `47174f3d8` | Sean Du | binderfs: Adapt fs parser API for 4.19 | Compatible filesystem parser for Linux 4.19. |
+| `a432c4b88c29` | `467b56c82` | Sean Du | binder: Drop unported vendor hooks | Drops unneeded vendor hook traces. |
+| `2bbebf3d8550` | `3efdacc07` | Carlos Llamas | BACKPORT: binder: use bitmap for faster descriptor lookup | Replaces linear descriptor scans with `dbitmap`. |
+| `1f58b96da92b` | `475355165` | Carlos Llamas | UPSTREAM: binder: fix descriptor lookup for context manager | Context manager descriptor fix. |
+| `04206788ea62` | `e4b85ae9a` | Carlos Llamas | FROMGIT: binder: fix double-free in dbitmap | Fixes potential double free bug in dbitmap. |
+| `00795a1a8a03` | `37333c601` | zenzer0s | kernel: Add FAKE_UNAME support and enable CONFIG_FAKE_UNAME_5_10 | Spoofs 5.10 for Apex/Mainline modules. |
+| `0f0ef40af8a4` | `fbdf3211d` | Sultan Alsawaf | kernel: Add tri-cluster API to affine IRQs and kthreads to fast CPUs | Foundational IRQ and kthread affinity API. |
+| `da695ad3afa0` | `6f6502559` | Sultan Alsawaf | kernel: Extend the perf-critical API to little CPUs | Extends affinity API to `cpu_lp_mask`. |
+
+---
+
+### Configuration & Toolchain Adaptations
+
+| Target Commit SHA | Subject | Description |
+| :--- | :--- | :--- |
+| `5f346a2d3705` | arm64: configs: Set LITTLE, BIG, and PRIME CPU masks for Kona | Configures `CONFIG_LITTLE_CPU_MASK=15`, `CONFIG_BIG_CPU_MASK=112`, `CONFIG_PRIME_CPU_MASK=128`. |
+| `fc586bf5d61d` | msm: kgsl: Cast KGSL_DMA_BIT_MASK to unsigned int in dma_set_max_seg_size | Fixes Clang -O3 constant-conversion warning. |
+| `9d613a3056f4` | arm64: configs: Enable CONFIG_THINLTO=y in oplus.config | Enables ThinLTO for 3-minute link times across 192 cores. |
 
 ---
 
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`36324465e33a`)
+* **Branch:** `port` (`9d613a3056f4`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 1m 54s (with ccache)
+* **Build Time:** 3m 03s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0318.zip`
-  * **MD5 Checksum:** `9cfe6e82ae70e23220f30cd3a9459ce0`
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0356.zip`
+  * **MD5 Checksum:** `745eb6cb858c727685f24051173613db`
