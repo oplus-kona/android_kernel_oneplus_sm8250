@@ -154,3 +154,12 @@ config PSTORE_RAM
 	  "ramoops.ko".
 
 	  For more information, see Documentation/admin-guide/ramoops.rst.
+
+config PSTORE_LAST_KMSG
+	bool "export /proc/last_kmsg"
+	default y
+	depends on PSTORE
+	help
+	  When this option is enabled, pstore will export a proc filesystem
+	  interface at /proc/last_kmsg containing the persistent console log
+	  from the previous boot.
