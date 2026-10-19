@@ -18,8 +18,8 @@
 | **Phase 3** | Qualcomm Kona / SM8250 Common SoC DTSI | ✅ **PASSED** | 2 / 3 (1 skipped) | Built `Image`, `dtb`, `dtbo.img` in 1m 51s |
 | **Phase 4** | Storage, Filesystems & Block Layer | ✅ **PASSED** | 13 ported (4 base/prior, 1 skipped, 3 deferred) | Built `Image`, `dtb`, `dtbo.img` in 3m 19s |
 | **Phase 5** | Memory Management: Core MM, ION, Allocators & Caches | ✅ **PASSED** | 29 ported (30 base, 8 skipped) | Built `Image`, `dtb`, `dtbo.img` in 3m 11s |
-| **Phase 6** | CPU Idle Management & cpuidle Subsystem | ⏳ **PENDING** | 0 / 98 | Ready to start |
-| **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ⏳ **PENDING** | 0 / 46 | Pending |
+| **Phase 6** | CPU Idle Management & cpuidle Subsystem | ✅ **PASSED** | 97 ported (1 skipped duplicate) | Built `Image`, `dtb`, `dtbo.img` in 1m 41s |
+| **Phase 7** | Scheduler (WALT / UCLAMP / Fair / RT) & CPU Frequency | ⏳ **PENDING** | 0 / 46 | Ready to start |
 | **Phase 8** | Display & Graphics (DRM / SDE / KGSL / Panels) | ⏳ **PENDING** | 0 / 23 | Pending |
 | **Phase 9** | Multimedia, Audio & Networking | ⏳ **PENDING** | 0 / 7 | Pending |
 | **Phase 10**| Simple LMK & ZRAM Swap Compression Stack | ⏳ **PENDING** | 0 / 111| Pending |
@@ -175,6 +175,23 @@
 
 ---
 
+### Phase 6: CPU Idle Subsystem & Governors (Menu, Ladder, TEO) (98 Commits)
+
+| Target Commit SHA | Source SHA | Author | Subject | Resolution / Notes |
+| :--- | :---: | :--- | :--- | :--- |
+| `093c448bb99e` | `0f90974bc` | mrsrimar22 | Revert "cpuidle: Do not select menu and ladder governors" | Restores menu and ladder governor selectable options. |
+| `3de53903f1bb` | `a5c099df8` | Danny Lin | cpuidle: lpm-levels: Remove debug event logging | Strips `lpm_debug` trace event overhead from idle enter/exit path. |
+| `a4b79ffedf85` | `7108fe678` | Rafael J. Wysocki | cpuidle: New timer events oriented governor for tickless systems | Introduces modern upstream TEO CPU idle governor. |
+| `002913952762` | `33ca06627` | Kazuki Hashimoto | cpuidle: teo: Prioritize it over other governors | Sets default cpuidle governor priority to TEO. |
+| `bfcebcb876ef` | `0b1ca4735` | Kazuki Hashimoto | lpm-levels: Parse all DT idle values | Parses `entry_latency`, `min_residency`, and `local_timer_stop` from DT. |
+| `a83ab8d26309` | `c669d71ab` | Alexander Winkowski | cpuidle: lpm-levels: Remove sleep bias feature | Eliminates `biastimer` latency and timer overhead. |
+| `6c6b527594f2` | `5aa08a0e6` | Alexander Winkowski | cpuidle: lpm-levels: Remove duplicated code | Cleans up redundant `local_irq_enable` calls. |
+| `d889d347dc33` | `83640aaad` | Rafael J. Wysocki | cpuidle: Allow exit latency to exceed target residency | Modern cpuidle latency/residency sanity checks. |
+| `Various` | `Various` (89 commits) | Rafael J. Wysocki et al. | TEO governor evolution & cpuidle nanosecond timing | Full upstream backport suite up to Linux 6.x refinements. |
+| *Skipped* | `49af8013b` | Manoj Vishwanathan | BACKPORT: cpuidle: lpm-levels: removing trace calls in idle | **Skipped duplicate**: `RCU_NONIDLE` trace wrappers already merged in Phase 1. |
+
+---
+
 ### Configuration & Toolchain Adaptations
 
 | Target Commit SHA | Subject | Description |
@@ -188,9 +205,9 @@
 ## 📦 Verified Build Artifacts
 
 * **Target Device:** OnePlus 8T (`kebab`)
-* **Branch:** `port` (`ede349c4a891`)
+* **Branch:** `port` (`d889d347dc33`)
 * **Compile Script:** `bash compile.sh`
-* **Build Time:** 3m 11s (ThinLTO enabled)
+* **Build Time:** 1m 41s (ThinLTO enabled)
 * **Status:** `Image`, `dtb`, and `dtbo.img` compiled cleanly without warnings.
-* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0440.zip`
-  * **MD5 Checksum:** `39097d3951a6d8c19b6d1c2876dcf76d`
+* **Packaged Flashable Zip:** `zenkernel-oplus-sm8250-261020-0458.zip`
+  * **MD5 Checksum:** `21f4ae86ec9f8df9461a5777a4a0ff51`
