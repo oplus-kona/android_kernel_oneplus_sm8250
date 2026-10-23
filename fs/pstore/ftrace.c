@@ -13,6 +13,7 @@
 
 #include <linux/kernel.h>
 #include <linux/compiler.h>
+#include <linux/module.h>
 #include <linux/irqflags.h>
 #include <linux/percpu.h>
 #include <linux/smp.h>
@@ -65,6 +66,30 @@ static struct ftrace_ops pstore_ftrace_ops __read_mostly = {
 static DEFINE_MUTEX(pstore_ftrace_lock);
 static bool pstore_ftrace_enabled;
 
+/*
+ * Debugfs may not be available on locked-down user builds, so allow
+ * enabling persistent tracing from the kernel command line as well.
+ */
+static bool pstore_ftrace_boot_enable;
+module_param_named(ftrace, pstore_ftrace_boot_enable, bool, 0400);
+MODULE_PARM_DESC(ftrace, "Enable persistent function tracing at boot");
+
+static int pstore_ftrace_start(void)
+{
+	int ret;
+
+	if (pstore_ftrace_enabled)
+		return 0;
+
+	ftrace_ops_set_global_filter(&pstore_ftrace_ops);
+	ret = register_ftrace_function(&pstore_ftrace_ops);
+	if (ret)
+		return ret;
+
+	pstore_ftrace_enabled = true;
+	return 0;
+}
+
 static ssize_t pstore_ftrace_knob_write(struct file *f, const char __user *buf,
 					size_t count, loff_t *ppos)
 {
@@ -81,10 +106,11 @@ static ssize_t pstore_ftrace_knob_write(struct file *f, const char __user *buf,
 		goto out;
 
 	if (on) {
-		ftrace_ops_set_global_filter(&pstore_ftrace_ops);
-		ret = register_ftrace_function(&pstore_ftrace_ops);
+		ret = pstore_ftrace_start();
 	} else {
 		ret = unregister_ftrace_function(&pstore_ftrace_ops);
+		if (!ret)
+			pstore_ftrace_enabled = false;
 	}
 
 	if (ret) {
@@ -93,7 +119,6 @@ static ssize_t pstore_ftrace_knob_write(struct file *f, const char __user *buf,
 		goto err;
 	}
 
-	pstore_ftrace_enabled = on;
 out:
 	ret = count;
 err:
@@ -124,6 +149,14 @@ void pstore_register_ftrace(void)
 
 	if (!psinfo->write)
 		return;
+
+	if (pstore_ftrace_boot_enable) {
+		int ret = pstore_ftrace_start();
+
+		if (ret)
+			pr_err("%s: unable to enable ftrace at boot: %d\n",
+			       __func__, ret);
+	}
 
 	pstore_ftrace_dir = debugfs_create_dir("pstore", NULL);
 	if (!pstore_ftrace_dir) {
