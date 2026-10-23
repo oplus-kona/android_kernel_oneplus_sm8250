@@ -16,22 +16,6 @@ export TZ=Asia/Jakarta
 export KBUILD_BUILD_USER="zenzer0s"
 export KBUILD_BUILD_HOST="kernel-lab"
 
-# RBE (Remote Build Execution) via BuildBuddy
-export USE_RBE=1
-export RBE_quiet=1
-export RBE_service="remote.buildbuddy.io:443"
-export BUILDBUDDY_API_KEY="YpI8qoAej5BTHTPjqKwz"
-export RBE_remote_headers="x-buildbuddy-api-key=YpI8qoAej5BTHTPjqKwz"
-export RBE_use_rpc_credentials=false
-export RBE_service_no_auth=true
-export RBE_use_unified_downloads=true
-export RBE_use_unified_uploads=true
-export RBE_CXX=1
-export RBE_CXX_EXEC_STRATEGY=remote_local_fallback
-export RBE_CXX_LINKS=1
-export RBE_CXX_LINKS_EXEC_STRATEGY=remote_local_fallback
-export NINJA_REMOTE_NUM_JOBS=500
-
 # Directories
 KERNEL_DIR="$PWD"
 BASE_DIR="$PWD/.."

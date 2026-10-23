@@ -51,21 +51,8 @@ jobs:
         run: |
           git submodule update --init --recursive
 
-      - name: Setup RBE (Remote Build Execution)
-        run: |
-          cd rbe
-          chmod +x install_rbe.sh
-          sudo ./install_rbe.sh
-          cd ..
-          source /etc/profile.d/rbe_env.sh || true
-
       - name: Build kernel
-        env:
-          USE_RBE: 1
-          BUILDBUDDY_API_KEY: YpI8qoAej5BTHTPjqKwz
-          RBE_remote_headers: x-buildbuddy-api-key=YpI8qoAej5BTHTPjqKwz
         run: |
-          source /etc/profile.d/rbe_env.sh || true
           chmod +x ./compile.sh
           ./compile.sh neutron ${{ github.event.inputs.device || 'kebab' }}
 
