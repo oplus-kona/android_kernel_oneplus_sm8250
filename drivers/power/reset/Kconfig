@@ -149,6 +149,26 @@ config POWER_RESET_QCOM
 	  Say Y here if you have a Qualcomm Tecnologies, Inc. board and wish to
 	  enable restart driver.
 
+config POWER_RESET_QCOM_KEEP_RAM
+	bool "Keep DRAM contents across restarts when pstore/ramoops is active"
+	depends on POWER_RESET_QCOM && PSTORE_RAM=y
+	default y
+	help
+	  The persistent RAM backing pstore/ramoops only survives a warm
+	  reset. Without this option a plain reboot (empty restart command)
+	  uses a PMIC hard reset that power-cycles DRAM, and a panic can park
+	  the SoC in download (dump) mode instead of rebooting, so
+	  /sys/fs/pstore stays empty.
+
+	  When ramoops is registered this option makes the restart path:
+	    - skip the download mode handoff on panic
+	    - default download_mode to 0
+	    - use a warm reset for every restart (keep_ram_restart=1) so the
+	      previous boot's log survives; this skips the PMIC hard reset
+
+	  Run time switches: /sys/module/msm_poweroff/parameters/keep_ram and
+	  keep_ram_restart. Say N if you need Qualcomm full RAM dumps on panic.
+
 config POWER_RESET_QNAP
 	bool "QNAP power-off driver"
 	depends on OF_GPIO && PLAT_ORION

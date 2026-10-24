@@ -17,6 +17,7 @@
 #include <linux/delay.h>
 #include <linux/input/qpnp-power-on.h>
 #include <linux/of_address.h>
+#include <linux/pstore_ram.h>
 
 #include <asm/cacheflush.h>
 #include <asm/system_misc.h>
@@ -66,7 +67,53 @@ static void scm_disable_sdi(void);
  * There is no API from TZ to re-enable the registers.
  * So the SDI cannot be re-enabled when it already by-passed.
  */
+#ifdef CONFIG_POWER_RESET_QCOM_KEEP_RAM
+/*
+ * With ramoops the log has to survive the reset, so the SoC must not be
+ * parked in download (dump) mode after a panic. Users who want Qualcomm
+ * full dumps can set download_mode=1 and keep_ram=0.
+ */
+static int download_mode;
+
+static int keep_ram = 1;
+module_param(keep_ram, int, 0644);
+MODULE_PARM_DESC(keep_ram,
+		 "Never enter download mode on panic while pstore/ramoops is active (default 1)");
+
+/*
+ * A warm reset on every restart keeps DRAM so the previous boot's log is
+ * readable from pstore. It skips the PMIC hard reset, which is acceptable
+ * here because the esoc modem and cnss drivers power their devices down from
+ * reboot notifiers first. Panics already take a warm reset in
+ * msm_restart_prepare(). Set to 0 to get the PMIC hard reset back.
+ */
+static int keep_ram_restart = 1;
+module_param(keep_ram_restart, int, 0644);
+MODULE_PARM_DESC(keep_ram_restart,
+		 "Also use a warm reset for normal restarts while ramoops is active (default 1)");
+
+static bool msm_restart_keep_ram(void)
+{
+	return keep_ram && ramoops_is_active();
+}
+
+static bool msm_restart_warm_all(void)
+{
+	return keep_ram_restart && ramoops_is_active();
+}
+#else
 static int download_mode = 1;
+
+static inline bool msm_restart_keep_ram(void)
+{
+	return false;
+}
+
+static inline bool msm_restart_warm_all(void)
+{
+	return false;
+}
+#endif
 static struct kobject dload_kobj;
 
 static int in_panic;
@@ -509,12 +556,16 @@ static void halt_spmi_pmic_arbiter(void)
 static void msm_restart_prepare(const char *cmd)
 {
 	bool need_warm_reset = false;
+	bool preserve = msm_restart_keep_ram();
 	/* Write download mode flags if we're panic'ing
 	 * Write download mode flags if restart_mode says so
 	 * Kill download mode if master-kill switch is set
+	 * Never hand off to download mode on panic while ramoops holds the
+	 * log: the SoC would stay in dump mode instead of rebooting.
 	 */
 
 	set_dload_mode(download_mode &&
+			!(preserve && in_panic) &&
 			(in_panic || restart_mode == RESTART_DLOAD));
 
 	if (qpnp_pon_check_hard_reset_stored()) {
@@ -543,7 +594,7 @@ static void msm_restart_prepare(const char *cmd)
 		pr_info("Forcing a warm reset of the system\n");
 
 	/* Hard reset the PMIC unless memory contents must be maintained. */
-	if (force_warm_reboot || need_warm_reset)
+	if (force_warm_reboot || msm_restart_warm_all() || need_warm_reset)
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
