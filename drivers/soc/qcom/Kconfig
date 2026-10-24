@@ -555,6 +555,17 @@ config QCOM_MINIDUMP_PSTORE
 	  (non-volatile memory) and during warm reboot these
 	  dumps will be preserved across reset.
 
+config QCOM_UEFI_KBOOTLOG
+	bool "Expose the bootloader log as /proc/bootloader_log"
+	depends on OF && PROC_FS
+	default y
+	help
+	  Maps the log buffer the bootloader (XBL UEFI / ABL) leaves in DDR,
+	  found through the DT node compatible "oplus,xbl_uefi_kbootlog",
+	  and shows its text in /proc/bootloader_log (root only). The buffer
+	  is only mapped while the file is open and covers the current boot
+	  only, because the bootloader rewrites it on every boot.
+
 config QCOM_APR
 	tristate "Qualcomm APR Bus (Asynchronous Packet Router)"
 	depends on ARCH_QCOM
