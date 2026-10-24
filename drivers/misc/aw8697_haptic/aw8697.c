@@ -10353,6 +10353,9 @@ static long aw8697_file_unlocked_ioctl(struct file *file, unsigned int cmd,
 		if (copy_to_user((void __user *)arg, &tmp, sizeof(uint32_t)))
 			ret = -EFAULT;
 		break;
+	case RICHTAP_SET_FREQ:
+		ret = -EOPNOTSUPP;
+		break;
 	case RICHTAP_RTP_MODE:
 		aw8697_haptic_stop(aw8697);
 		if (copy_from_user(aw8697->rtp_ptr, (void __user *)arg,
