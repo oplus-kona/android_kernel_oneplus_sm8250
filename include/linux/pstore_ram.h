@@ -102,4 +102,17 @@ struct ramoops_platform_data {
 	struct persistent_ram_ecc_info ecc_info;
 };
 
+/*
+ * True once ramoops has registered with pstore. Restart code uses it to
+ * keep DRAM contents across the reset.
+ */
+#if IS_BUILTIN(CONFIG_PSTORE_RAM)
+bool ramoops_is_active(void);
+#else
+static inline bool ramoops_is_active(void)
+{
+	return false;
+}
+#endif
+
 #endif

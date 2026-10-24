@@ -723,6 +723,34 @@ static int ramoops_parse_dt(struct platform_device *pdev,
 	return 0;
 }
 
+static bool ramoops_registered;
+
+bool ramoops_is_active(void)
+{
+	return ramoops_registered;
+}
+
+/* Summarise what the previous boot left behind, one line for dmesg. */
+static void ramoops_report_previous(struct ramoops_context *cxt)
+{
+	size_t cons = 0, pmsg = 0, ftrace = 0;
+	unsigned int dumps = 0, i;
+
+	for (i = 0; i < cxt->max_dump_cnt; i++)
+		if (cxt->dprzs[i] && persistent_ram_old_size(cxt->dprzs[i]))
+			dumps++;
+	if (cxt->cprz)
+		cons = persistent_ram_old_size(cxt->cprz);
+	if (cxt->mprz)
+		pmsg = persistent_ram_old_size(cxt->mprz);
+	for (i = 0; i < cxt->max_ftrace_cnt; i++)
+		if (cxt->fprzs && cxt->fprzs[i])
+			ftrace += persistent_ram_old_size(cxt->fprzs[i]);
+
+	pr_info("previous boot left: %u dump record(s), console %zu, pmsg %zu, ftrace %zu bytes\n",
+		dumps, cons, pmsg, ftrace);
+}
+
 static int ramoops_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -731,6 +759,7 @@ static int ramoops_probe(struct platform_device *pdev)
 	struct ramoops_context *cxt = &oops_cxt;
 	size_t dump_mem_sz;
 	phys_addr_t paddr;
+	unsigned int i;
 	int err = -EINVAL;
 
 	if (dev_of_node(dev) && !pdata) {
@@ -794,6 +823,15 @@ static int ramoops_probe(struct platform_device *pdev)
 				&cxt->max_dump_cnt, 0, 0);
 	if (err)
 		goto fail_out;
+
+	/*
+	 * Continue after the newest saved dump instead of restarting at zone
+	 * 0, so a crash in this boot does not erase the previous boot's
+	 * records (for example a restart followed by a panic).
+	 */
+	for (i = 0; i < cxt->max_dump_cnt; i++)
+		if (persistent_ram_old_size(cxt->dprzs[i]))
+			cxt->dump_write_cnt = (i + 1) % cxt->max_dump_cnt;
 
 	err = ramoops_init_prz("console", dev, cxt, &cxt->cprz, &paddr,
 			       cxt->console_size, 0);
@@ -872,6 +910,9 @@ static int ramoops_probe(struct platform_device *pdev)
 		cxt->size, (unsigned long long)cxt->phys_addr,
 		cxt->ecc_info.ecc_size, cxt->ecc_info.block_size);
 
+	ramoops_report_previous(cxt);
+	ramoops_registered = true;
+
 	return 0;
 
 fail_buf:
@@ -892,6 +933,7 @@ static int ramoops_remove(struct platform_device *pdev)
 {
 	struct ramoops_context *cxt = &oops_cxt;
 
+	ramoops_registered = false;
 	pstore_unregister(&cxt->pstore);
 
 	kfree(cxt->pstore.buf);

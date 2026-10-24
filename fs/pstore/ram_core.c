@@ -521,25 +521,38 @@ static int persistent_ram_post_init(struct persistent_ram_zone *prz, u32 sig,
 
 	sig ^= PERSISTENT_RAM_SIG;
 
+	/*
+	 * These lines are the first thing to read when pstore is empty after
+	 * a reboot: "restored" means DRAM survived, "zeroed" means something
+	 * wiped the region (or it was never written), "foreign" means the
+	 * header holds data that is not ours (cold boot garbage or another
+	 * writer).
+	 */
 	if (prz->buffer->sig == sig) {
 		if (buffer_size(prz) == 0 && buffer_start(prz) == 0) {
-			pr_debug("found existing empty buffer\n");
+			pr_info("%pa: valid header, buffer empty\n", &prz->paddr);
 			return 0;
 		}
 
 		if (buffer_size(prz) > prz->buffer_size ||
 		    buffer_start(prz) > buffer_size(prz))
-			pr_info("found existing invalid buffer, size %zu, start %zu\n",
-				buffer_size(prz), buffer_start(prz));
+			pr_info("%pa: found existing invalid buffer, size %zu, start %zu\n",
+				&prz->paddr, buffer_size(prz),
+				buffer_start(prz));
 		else {
-			pr_debug("found existing buffer, size %zu, start %zu\n",
-				 buffer_size(prz), buffer_start(prz));
+			pr_info("%pa: restored previous data, size %zu, start %zu\n",
+				&prz->paddr, buffer_size(prz),
+				buffer_start(prz));
 			persistent_ram_save_old(prz);
 			return 0;
 		}
+	} else if (!prz->buffer->sig && !buffer_size(prz) &&
+		   !buffer_start(prz)) {
+		pr_info("%pa: no previous data, header is zeroed (wiped or first boot)\n",
+			&prz->paddr);
 	} else {
-		pr_debug("no valid data in buffer (sig = 0x%08x)\n",
-			 prz->buffer->sig);
+		pr_info("%pa: no previous data, foreign header (sig 0x%08x, expected 0x%08x)\n",
+			&prz->paddr, prz->buffer->sig, sig);
 	}
 
 	/* Rewind missing or invalid memory area. */
