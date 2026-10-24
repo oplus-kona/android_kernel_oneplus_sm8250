@@ -17,7 +17,13 @@
 
 #define ESOC_MAX_PON_TRIES	5
 
-#define BOOT_FAIL_ACTION_DEF BOOT_FAIL_ACTION_PANIC
+/*
+ * An SDX55M that was running before a warm SoC reset can fail its first boot
+ * attempt. Reset it through its PMIC and retry (ESOC_DEF_PON_REQ tries in
+ * total, then panic) instead of panicking on the first failure. Userspace can
+ * still change the action with the ESOC boot-fail ioctl.
+ */
+#define BOOT_FAIL_ACTION_DEF BOOT_FAIL_ACTION_COLD_RESET
 
 enum esoc_pon_state {
 	PON_INIT,
