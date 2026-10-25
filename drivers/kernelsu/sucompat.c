@@ -218,12 +218,19 @@ int ksu_handle_devpts(struct inode *inode)
 		return 0;
 
 	if (ksu_devpts_sid) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+		/*
+		 * Always go through selinux_inode(). This tree has the LSM
+		 * blob stacking backport, where inode->i_security starts with
+		 * a struct rcu_head and SELinux's blob follows it at
+		 * selinux_blob_sizes.lbs_inode. Casting i_security directly
+		 * (what the < 5.1 branch of upstream KernelSU-Next does) puts
+		 * the write 16 bytes too early: ->sid lands on the high word
+		 * of isec->list.next. The later free of that devpts inode then
+		 * sees a non-empty list and dies in list_del_init() with
+		 * "list_del corruption ... but was 0000<sid>xxxxxxxx".
+		 */
 		struct inode_security_struct *sec = selinux_inode(inode);
-#else
-		struct inode_security_struct *sec =
-			(struct inode_security_struct *)inode->i_security;
-#endif
+
 		if (sec) {
 			sec->sid = ksu_devpts_sid;
 		}
