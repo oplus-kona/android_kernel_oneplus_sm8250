@@ -82,6 +82,20 @@ int esoc_set_boot_fail_action(struct esoc_clink *esoc_clink, u32 action)
 		return -EAGAIN;
 	}
 
+	/*
+	 * The vendor modem helper asks for a panic on boot failure. After a
+	 * kernel panic the AP does a warm reset while the SDX55M keeps
+	 * running, so its first boot attempt after that fails and a panic
+	 * here turns every panic into a boot loop. Keep resetting the modem
+	 * instead; exhausting the tries now shuts it down without a panic
+	 * (see mdm_handle_boot_fail()).
+	 */
+	if (action == BOOT_FAIL_ACTION_PANIC) {
+		pr_info("esoc: ignoring request to panic on modem boot failure\n");
+		esoc_mdm_log("Boot fail action panic remapped to cold reset\n");
+		action = BOOT_FAIL_ACTION_DEF;
+	}
+
 	atomic_set(&mdm_drv->boot_fail_action, action);
 	esoc_mdm_log("Boot fail action configured to %u\n", action);
 
@@ -102,6 +116,14 @@ int esoc_set_n_pon_tries(struct esoc_clink *esoc_clink, u32 n_tries)
 		esoc_mdm_log("esoc-mdm driver not present\n");
 		return -EAGAIN;
 	}
+
+	if (n_tries < ESOC_DEF_PON_REQ) {
+		esoc_mdm_log("Num PON tries %u raised to %u\n", n_tries,
+				ESOC_DEF_PON_REQ);
+		n_tries = ESOC_DEF_PON_REQ;
+	}
+	if (n_tries > ESOC_MAX_PON_TRIES)
+		n_tries = ESOC_MAX_PON_TRIES;
 
 	atomic_set(&mdm_drv->n_pon_tries, n_tries);
 	esoc_mdm_log("Num PON tries configured to %u\n", n_tries);
@@ -411,8 +433,15 @@ static int mdm_handle_boot_fail(struct esoc_clink *esoc_clink, u8 *pon_trial)
 
 	if (*pon_trial == atomic_read(&mdm_drv->n_pon_tries)) {
 		esoc_mdm_log("Reached max. number of boot trials\n");
+		dev_err(&esoc_clink->dev,
+			"modem failed to boot after %u tries, leaving it off\n",
+			*pon_trial + 1);
 		atomic_set(&mdm_drv->boot_fail_action,
-					BOOT_FAIL_ACTION_PANIC);
+					BOOT_FAIL_ACTION_SHUTDOWN);
+	} else {
+		dev_warn(&esoc_clink->dev,
+			"modem boot attempt %u failed, resetting it and retrying\n",
+			*pon_trial + 1);
 	}
 
 	switch (atomic_read(&mdm_drv->boot_fail_action)) {
@@ -442,9 +471,12 @@ static int mdm_handle_boot_fail(struct esoc_clink *esoc_clink, u8 *pon_trial)
 		msleep(S3_RESET_DELAY_MS);
 		break;
 	case BOOT_FAIL_ACTION_PANIC:
-		esoc_mdm_log("Calling panic!!\n");
-		panic("Panic requested on external modem boot failure\n");
-		break;
+		/* Not reachable through the setter; never panic anyway. */
+		mdm_subsys_retry_powerup_cleanup(esoc_clink,
+							ESOC_HOOK_MDM_DOWN);
+		esoc_mdm_log("Panic requested, shutting the modem down\n");
+		mdm_power_down(mdm);
+		return -EIO;
 	case BOOT_FAIL_ACTION_NOP:
 		esoc_mdm_log("Leaving the modem in its curent state\n");
 		mdm_drv->mode = PWR_OFF;
