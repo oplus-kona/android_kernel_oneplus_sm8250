@@ -449,6 +449,14 @@ static int notrace ramoops_pstore_write(struct pstore_record *record)
 
 	cxt->dump_write_cnt = (cxt->dump_write_cnt + 1) % cxt->max_dump_cnt;
 
+	/*
+	 * Keep the next slot empty. It is the oldest record and gets
+	 * overwritten next anyway; being empty is how the next boot finds
+	 * where the ring continues (see ramoops_find_write_slot()).
+	 */
+	if (cxt->max_dump_cnt > 1)
+		persistent_ram_zap(cxt->dprzs[cxt->dump_write_cnt]);
+
 	return 0;
 }
 
@@ -751,6 +759,39 @@ static void ramoops_report_previous(struct ramoops_context *cxt)
 		dumps, cons, pmsg, ftrace);
 }
 
+/*
+ * The dump zones are a ring. ramoops_pstore_write() leaves the slot it will
+ * use next empty, so after a reboot the write position is the empty slot that
+ * follows a used one. "Highest used index + 1" is not enough: once the ring
+ * has wrapped the newest record is not the one in the highest slot, and the
+ * next crash would overwrite it (a panic dump in slot 1 was lost to the
+ * records of the boot that followed it).
+ */
+static unsigned int ramoops_find_write_slot(struct ramoops_context *cxt)
+{
+	unsigned int n = cxt->max_dump_cnt;
+	unsigned int i, last_used = 0;
+	bool any_used = false;
+
+	for (i = 0; i < n; i++) {
+		unsigned int prev = (i + n - 1) % n;
+
+		if (!persistent_ram_old_size(cxt->dprzs[i]) &&
+		    persistent_ram_old_size(cxt->dprzs[prev]))
+			return i;
+	}
+
+	/* Every slot is used (data from before the ring was marked). */
+	for (i = 0; i < n; i++) {
+		if (persistent_ram_old_size(cxt->dprzs[i])) {
+			any_used = true;
+			last_used = i;
+		}
+	}
+
+	return any_used ? (last_used + 1) % n : 0;
+}
+
 static int ramoops_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -759,7 +800,6 @@ static int ramoops_probe(struct platform_device *pdev)
 	struct ramoops_context *cxt = &oops_cxt;
 	size_t dump_mem_sz;
 	phys_addr_t paddr;
-	unsigned int i;
 	int err = -EINVAL;
 
 	if (dev_of_node(dev) && !pdata) {
@@ -824,14 +864,7 @@ static int ramoops_probe(struct platform_device *pdev)
 	if (err)
 		goto fail_out;
 
-	/*
-	 * Continue after the newest saved dump instead of restarting at zone
-	 * 0, so a crash in this boot does not erase the previous boot's
-	 * records (for example a restart followed by a panic).
-	 */
-	for (i = 0; i < cxt->max_dump_cnt; i++)
-		if (persistent_ram_old_size(cxt->dprzs[i]))
-			cxt->dump_write_cnt = (i + 1) % cxt->max_dump_cnt;
+	cxt->dump_write_cnt = ramoops_find_write_slot(cxt);
 
 	err = ramoops_init_prz("console", dev, cxt, &cxt->cprz, &paddr,
 			       cxt->console_size, 0);
