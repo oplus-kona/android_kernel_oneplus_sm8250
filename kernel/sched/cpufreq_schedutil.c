@@ -17,6 +17,9 @@
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
 
+/* Full-scale IO boosts pin the top OPP for as long as IO wakeups keep arriving. */
+#define IOWAIT_BOOST_MAX	(SCHED_CAPACITY_SCALE / 2)
+
 struct sugov_tunables {
 	struct gov_attr_set	attr_set;
 	unsigned int		up_rate_limit_us;
@@ -507,7 +510,7 @@ static bool sugov_iowait_reset(struct sugov_cpu *sg_cpu, u64 time,
  * Each time a task wakes up after an IO operation, the CPU utilization can be
  * boosted to a certain utilization which doubles at each "frequent and
  * successive" wakeup from IO, ranging from the utilization of the minimum
- * OPP to the utilization of the maximum OPP.
+ * OPP up to IOWAIT_BOOST_MAX.
  * To keep doubling, an IO boost has to be requested at least once per tick,
  * otherwise we restart from the utilization of the minimum OPP.
  */
@@ -533,7 +536,8 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 	/* Double the boost at each request */
 	if (sg_cpu->iowait_boost) {
 		sg_cpu->iowait_boost =
-			min_t(unsigned int, sg_cpu->iowait_boost << 1, SCHED_CAPACITY_SCALE);
+			min_t(unsigned int, sg_cpu->iowait_boost << 1,
+			      IOWAIT_BOOST_MAX);
 		return;
 	}
 
