@@ -20,6 +20,7 @@
 #include <linux/compiler.h>
 #include <linux/device.h>
 #include <linux/init.h>
+#include <linux/kconfig.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/types.h>
@@ -106,7 +107,7 @@ struct ramoops_platform_data {
  * True once ramoops has registered with pstore. Restart code uses it to
  * keep DRAM contents across the reset.
  */
-#if IS_BUILTIN(CONFIG_PSTORE_RAM)
+#if IS_ENABLED(CONFIG_PSTORE_RAM)
 bool ramoops_is_active(void);
 #else
 static inline bool ramoops_is_active(void)
