@@ -402,6 +402,10 @@ void mhi_deinit_free_irq(struct mhi_controller *mhi_cntrl)
 	int i;
 	struct mhi_event *mhi_event = mhi_cntrl->mhi_event;
 
+	/* irq array is only allocated once mhi_init_pci_dev() succeeded */
+	if (!mhi_cntrl->irq)
+		return;
+
 	for (i = 0; i < mhi_cntrl->total_ev_rings; i++, mhi_event++) {
 		if (!mhi_event->request_irq)
 			continue;
