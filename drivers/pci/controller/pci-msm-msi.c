@@ -234,7 +234,15 @@ static int msm_msi_irq_domain_alloc(struct irq_domain *domain,
 					nr_irqs, 0);
 	if (pos < msi->nr_irqs) {
 		bitmap_set(msi->bitmap, pos, nr_irqs);
+		dev_info(msi->dev,
+			 "MSI: alloc %u vecs at %d for %s, used:%*pb\n",
+			 nr_irqs, pos, dev_name(dev), msi->nr_irqs,
+			 msi->bitmap);
 	} else {
+		dev_err(msi->dev,
+			"MSI: no %u free vecs for %s (nr_irqs:%d), used:%*pb\n",
+			nr_irqs, dev_name(dev), msi->nr_irqs,
+			msi->nr_irqs, msi->bitmap);
 		ret = -ENOSPC;
 		goto out;
 	}
@@ -260,7 +268,7 @@ static void msm_msi_irq_domain_free(struct irq_domain *domain,
 	struct irq_data *data = irq_domain_get_irq_data(domain, virq);
 	struct msm_msi_client *client;
 	struct msm_msi *msi;
-	int i;
+	int i, j;
 
 	if (!data)
 		return;
@@ -269,11 +277,21 @@ static void msm_msi_irq_domain_free(struct irq_domain *domain,
 	msi = client->msi;
 
 	mutex_lock(&msi->mutex);
-	for (i = 0; i < nr_irqs; i++)
+	for (i = 0; i < msi->nr_irqs; i++)
 		if (msi->irqs[i].virq == virq)
 			break;
 
+	if (i == msi->nr_irqs) {
+		dev_err(msi->dev, "MSI: virq %u not tracked, used:%*pb\n",
+			virq, msi->nr_irqs, msi->bitmap);
+		mutex_unlock(&msi->mutex);
+		irq_domain_free_irqs_parent(domain, virq, nr_irqs);
+		return;
+	}
+
 	bitmap_clear(msi->bitmap, i, nr_irqs);
+	for (j = i; j < i + nr_irqs; j++)
+		msi->irqs[j].virq = 0;
 	client->nr_irqs -= nr_irqs;
 
 	if (!client->nr_irqs) {
