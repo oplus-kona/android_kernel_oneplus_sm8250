@@ -129,12 +129,14 @@ config PSTORE_FTRACE
 	bool "Persistent function tracer"
 	depends on PSTORE
 	depends on FUNCTION_TRACER
-	depends on DEBUG_FS
 	help
 	  With this option kernel traces function calls into a persistent
 	  ram buffer that can be decoded and dumped after reboot through
 	  pstore filesystem. It can be used to determine what function
 	  was last called before a reset or panic.
+
+	  The debugfs knob is optional; without CONFIG_DEBUG_FS use
+	  pstore.ftrace=1 on the kernel command line.
 
 	  If unsure, say N.
 

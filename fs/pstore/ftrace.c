@@ -90,6 +90,7 @@ static int pstore_ftrace_start(void)
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static ssize_t pstore_ftrace_knob_write(struct file *f, const char __user *buf,
 					size_t count, loff_t *ppos)
 {
@@ -126,26 +127,13 @@ err:
 
 	return ret;
 }
-
-static ssize_t pstore_ftrace_knob_read(struct file *f, char __user *buf,
-				       size_t count, loff_t *ppos)
-{
-	char val[] = { '0' + pstore_ftrace_enabled, '\n' };
-
-	return simple_read_from_buffer(buf, count, ppos, val, sizeof(val));
-}
-
-static const struct file_operations pstore_knob_fops = {
-	.open	= simple_open,
-	.read	= pstore_ftrace_knob_read,
-	.write	= pstore_ftrace_knob_write,
-};
-
-static struct dentry *pstore_ftrace_dir;
+#endif
 
 void pstore_register_ftrace(void)
 {
+#ifdef CONFIG_DEBUG_FS
 	struct dentry *file;
+#endif
 
 	if (!psinfo->write)
 		return;
@@ -158,6 +146,12 @@ void pstore_register_ftrace(void)
 			       __func__, ret);
 	}
 
+#ifdef CONFIG_DEBUG_FS
+	/*
+	 * The debugfs knob is optional: boot builds have no debugfs (it hosts
+	 * the QCACLD debug nodes and breaks Wi-Fi), so the command line
+	 * pstore.ftrace=1 above is the only control there.
+	 */
 	pstore_ftrace_dir = debugfs_create_dir("pstore", NULL);
 	if (!pstore_ftrace_dir) {
 		pr_err("%s: unable to create pstore directory\n", __func__);
@@ -174,6 +168,7 @@ void pstore_register_ftrace(void)
 	return;
 err_file:
 	debugfs_remove(pstore_ftrace_dir);
+#endif
 }
 
 void pstore_unregister_ftrace(void)
@@ -181,9 +176,11 @@ void pstore_unregister_ftrace(void)
 	mutex_lock(&pstore_ftrace_lock);
 	if (pstore_ftrace_enabled) {
 		unregister_ftrace_function(&pstore_ftrace_ops);
-		pstore_ftrace_enabled = 0;
+		pstore_ftrace_enabled = false;
 	}
 	mutex_unlock(&pstore_ftrace_lock);
 
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(pstore_ftrace_dir);
+#endif
 }
