@@ -860,10 +860,17 @@ endif
 
 ifdef CONFIG_FUNCTION_TRACER
 ifdef CONFIG_FTRACE_MCOUNT_RECORD
-  # gcc 5 supports generating the mcount tables directly
-  ifeq ($(call cc-option-yn,-mrecord-mcount),y)
-    CC_FLAGS_FTRACE	+= -mrecord-mcount
-    export CC_USING_RECORD_MCOUNT := 1
+  # -mrecord-mcount records the call sites per object, but LTO moves and
+  # merges functions afterwards, so the records no longer describe the code
+  # that ends up in vmlinux and ftrace fails to patch them ("ftrace failed
+  # to modify [0x1c]"). With LTO, leave the compiler out of it and let
+  # link-vmlinux.sh run recordmcount on vmlinux.o after the LTO link.
+  ifndef CONFIG_LTO_CLANG
+    # gcc 5 supports generating the mcount tables directly
+    ifeq ($(call cc-option-yn,-mrecord-mcount),y)
+      CC_FLAGS_FTRACE	+= -mrecord-mcount
+      export CC_USING_RECORD_MCOUNT := 1
+    endif
   endif
   ifdef CONFIG_HAVE_NOP_MCOUNT
     ifeq ($(call cc-option-yn, -mnop-mcount),y)
