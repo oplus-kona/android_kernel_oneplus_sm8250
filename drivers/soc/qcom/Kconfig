@@ -566,6 +566,20 @@ config QCOM_UEFI_KBOOTLOG
 	  is only mapped while the file is open and covers the current boot
 	  only, because the bootloader rewrites it on every boot.
 
+config QCOM_KLOG_FLUSH
+	bool "Keep kernel and bootloader logs on flash"
+	depends on PSTORE && PROC_FS
+	default y
+	help
+	  Writes the kernel log and the bootloader log to a file under
+	  /mnt/vendor/persist every 20 seconds, so a log survives a reset
+	  that takes DRAM with it (a PON shutdown after a long power-button
+	  press, a cold reset). pstore/ramoops only survives warm resets.
+
+	  The last snapshot is available as /proc/last_kmsg. Use
+	  klog_flush.interval=0 to disable it, klog_flush.file=<name> to
+	  change the file name.
+
 config QCOM_APR
 	tristate "Qualcomm APR Bus (Asynchronous Packet Router)"
 	depends on ARCH_QCOM
