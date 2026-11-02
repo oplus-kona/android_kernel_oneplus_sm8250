@@ -792,6 +792,25 @@ static unsigned int ramoops_find_write_slot(struct ramoops_context *cxt)
 	return any_used ? (last_used + 1) % n : 0;
 }
 
+static void ramoops_mark_boot(struct ramoops_context *cxt)
+{
+	const char *tag;
+	char buf[64];
+	int len;
+
+	if (!cxt->cprz)
+		return;
+
+	/*
+	 * The console zone is one continuous ring, so this marker is the only
+	 * way to tell a clean boot from a warm reset when reading it back.
+	 */
+	tag = persistent_ram_old_size(cxt->cprz) ?
+	      "continued from previous boot" : "fresh";
+	len = snprintf(buf, sizeof(buf), "\nramoops: console zone %s\n", tag);
+	persistent_ram_write(cxt->cprz, buf, len);
+}
+
 static int ramoops_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -944,6 +963,7 @@ static int ramoops_probe(struct platform_device *pdev)
 		cxt->ecc_info.ecc_size, cxt->ecc_info.block_size);
 
 	ramoops_report_previous(cxt);
+	ramoops_mark_boot(cxt);
 	ramoops_registered = true;
 
 	return 0;

@@ -8,8 +8,9 @@
  * inside it ("xbluefi-offset"). The firmware memory map lists the buffer as
  * "Log Buffer", 0x8000 bytes.
  *
- * The buffer is only mapped while /proc/bootloader_log is open and is copied
- * into a private snapshot, so nothing touches the firmware memory at boot.
+ * The buffer is copied once at init, right after the firmware hands over, so
+ * it is the log of the boot that just started. Copying on every open() would
+ * show the firmware's output of the next boot when the previous one hung.
  * The file is root only because the log can carry device identifiers.
  */
 
@@ -19,6 +20,7 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/proc_fs.h>
@@ -28,36 +30,45 @@
 
 #define KBOOTLOG_MAX_SIZE	0x8000
 
-struct kbootlog_snapshot {
-	size_t len;
-	char data[];
-};
-
+static char *kbootlog_text;
+static size_t kbootlog_len;
 static phys_addr_t kbootlog_base;
 static size_t kbootlog_size;
+static DEFINE_MUTEX(kbootlog_lock);
 
-static int kbootlog_open(struct inode *inode, struct file *file)
+static ssize_t kbootlog_read(struct file *file, char __user *buf,
+			     size_t count, loff_t *ppos)
 {
-	struct kbootlog_snapshot *snap;
+	ssize_t ret;
+
+	mutex_lock(&kbootlog_lock);
+	ret = simple_read_from_buffer(buf, count, ppos, kbootlog_text,
+				      kbootlog_len);
+	mutex_unlock(&kbootlog_lock);
+
+	return ret;
+}
+
+static const struct file_operations kbootlog_fops = {
+	.owner		= THIS_MODULE,
+	.read		= kbootlog_read,
+	.llseek		= default_llseek,
+};
+
+static void __init kbootlog_capture(void)
+{
 	void __iomem *va;
 	char *raw;
 	size_t i, n, len;
 
 	raw = kmalloc(kbootlog_size, GFP_KERNEL);
 	if (!raw)
-		return -ENOMEM;
-
-	snap = kzalloc(sizeof(*snap) + kbootlog_size, GFP_KERNEL);
-	if (!snap) {
-		kfree(raw);
-		return -ENOMEM;
-	}
+		return;
 
 	va = ioremap(kbootlog_base, kbootlog_size);
 	if (!va) {
-		kfree(snap);
 		kfree(raw);
-		return -ENOMEM;
+		return;
 	}
 	memcpy_fromio(raw, va, kbootlog_size);
 	iounmap(va);
@@ -69,37 +80,14 @@ static int kbootlog_open(struct inode *inode, struct file *file)
 
 		if (c == '\r')
 			continue;
-		snap->data[n++] = (isprint(c) || c == '\n' || c == '\t') ?
-				  c : '?';
+		raw[n++] = (isprint(c) || c == '\n' || c == '\t') ? c : '?';
 	}
-	snap->len = n;
-	kfree(raw);
 
-	file->private_data = snap;
-	return 0;
+	mutex_lock(&kbootlog_lock);
+	kbootlog_text = raw;
+	kbootlog_len = n;
+	mutex_unlock(&kbootlog_lock);
 }
-
-static ssize_t kbootlog_read(struct file *file, char __user *buf,
-			     size_t count, loff_t *ppos)
-{
-	struct kbootlog_snapshot *snap = file->private_data;
-
-	return simple_read_from_buffer(buf, count, ppos, snap->data, snap->len);
-}
-
-static int kbootlog_release(struct inode *inode, struct file *file)
-{
-	kfree(file->private_data);
-	return 0;
-}
-
-static const struct file_operations kbootlog_fops = {
-	.owner		= THIS_MODULE,
-	.open		= kbootlog_open,
-	.read		= kbootlog_read,
-	.llseek		= default_llseek,
-	.release	= kbootlog_release,
-};
 
 static int __init kbootlog_init(void)
 {
@@ -132,15 +120,17 @@ static int __init kbootlog_init(void)
 
 	kbootlog_base = res.start + off;
 	kbootlog_size = min_t(size_t, KBOOTLOG_MAX_SIZE,
-			      resource_size(&res) - off);
+				    resource_size(&res) - off);
 
-	if (!proc_create("bootloader_log", 0400, NULL, &kbootlog_fops)) {
+	if (!proc_create("bootloader_log", 0444, NULL, &kbootlog_fops)) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	pr_info("kbootlog: %zu bytes at %pa exposed as /proc/bootloader_log\n",
-		kbootlog_size, &kbootlog_base);
+	kbootlog_capture();
+
+	pr_info("kbootlog: %zu bytes at %pa captured as /proc/bootloader_log\n",
+		kbootlog_len, &kbootlog_base);
 	ret = 0;
 out:
 	of_node_put(np);

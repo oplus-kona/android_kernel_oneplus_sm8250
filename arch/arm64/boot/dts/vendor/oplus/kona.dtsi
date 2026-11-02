@@ -42,15 +42,22 @@
 		no-map;
 	};
 
+	/*
+	 * 0xb0000000..0xb0400000 is the "ramoops" window XBL reserves in its
+	 * own memory map, next to the "Kernel" reservation that runs from
+	 * 0xa0000000 to 0xb0000000. Do not move this into the kernel window.
+	 */
 	ramoops: ramoops@0xb0000000 {
 		compatible = "ramoops";
 		reg = <0x0 0xb0000000 0x0 0x00400000>;
-		record-size = <0x40000>;
-		console-size = <0x40000>;
-		pmsg-size = <0x200000>;
+		/* Two dmesg slots, each large enough for a full LOG_BUF. */
+		record-size = <0x80000>;
+		console-size = <0x140000>;
+		pmsg-size = <0x80000>;
+		ftrace-size = <0x20000>;
 		ecc-size = <0x0>;
-		/* Dump dmesg on restart; requires printk.always_kmsg_dump=1. */
-		max-reason = <4>;
+		/* RESTART, HALT and POWEROFF are reasons 4..6. */
+		max-reason = <7>;
 	};
 };
 

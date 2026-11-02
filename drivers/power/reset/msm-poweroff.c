@@ -16,6 +16,7 @@
 #include <linux/pm.h>
 #include <linux/delay.h>
 #include <linux/input/qpnp-power-on.h>
+#include <linux/kmsg_dump.h>
 #include <linux/of_address.h>
 #include <linux/pstore_ram.h>
 
@@ -92,6 +93,22 @@ module_param(keep_ram_restart, int, 0644);
 MODULE_PARM_DESC(keep_ram_restart,
 		 "Also use a warm reset for normal restarts while ramoops is active (default 1)");
 
+/*
+ * There is no way to power off and keep DRAM: a PON shutdown cuts the DDR
+ * rails. A warm reset is the closest thing, and it still lets the phone start
+ * again so the log can be read. Set to 0 for a real poweroff.
+ */
+static int keep_ram_poweroff = 1;
+module_param(keep_ram_poweroff, int, 0644);
+MODULE_PARM_DESC(keep_ram_poweroff,
+		 "Warm reset instead of powering off while ramoops is active (default 1)");
+
+static bool do_msm_poweroff_keep_ram(void)
+{
+	/* Keep DRAM when the user asks for a poweroff too; see keep_ram_poweroff */
+	return keep_ram_poweroff && ramoops_is_active();
+}
+
 static bool msm_restart_keep_ram(void)
 {
 	return keep_ram && ramoops_is_active();
@@ -103,6 +120,11 @@ static bool msm_restart_warm_all(void)
 }
 #else
 static int download_mode = 1;
+
+static inline bool do_msm_poweroff_keep_ram(void)
+{
+	return false;
+}
 
 static inline bool msm_restart_keep_ram(void)
 {
@@ -557,6 +579,9 @@ static void msm_restart_prepare(const char *cmd)
 {
 	bool need_warm_reset = false;
 	bool preserve = msm_restart_keep_ram();
+
+	if (!ramoops_is_active())
+		pr_warn("ramoops not registered: restart will use a cold reset, pstore logs will be lost\n");
 	/* Write download mode flags if we're panic'ing
 	 * Write download mode flags if restart_mode says so
 	 * Kill download mode if master-kill switch is set
@@ -727,9 +752,21 @@ static void do_msm_poweroff(void)
 {
 	pr_notice("Powering off the SoC\n");
 
-	set_dload_mode(0);
-	scm_disable_sdi();
-	qpnp_pon_system_pwr_off(PON_POWER_OFF_SHUTDOWN);
+	kmsg_dump(KMSG_DUMP_POWEROFF);
+
+	/*
+	 * A PON shutdown drops the DDR rails, so the pstore record just written
+	 * would be gone before the next boot can read it. A warm reset keeps it.
+	 */
+	if (do_msm_poweroff_keep_ram()) {
+		pr_notice("ramoops active, warm resetting instead of powering off\n");
+		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+		flush_cache_all();
+	} else {
+		set_dload_mode(0);
+		scm_disable_sdi();
+		qpnp_pon_system_pwr_off(PON_POWER_OFF_SHUTDOWN);
+	}
 
 	halt_spmi_pmic_arbiter();
 	deassert_ps_hold();

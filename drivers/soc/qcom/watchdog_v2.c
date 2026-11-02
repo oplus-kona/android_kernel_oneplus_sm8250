@@ -5,6 +5,7 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/kmsg_dump.h>
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/sort.h>
@@ -31,6 +32,7 @@
 #include <linux/sched/clock.h>
 #include <linux/cpumask.h>
 #include <uapi/linux/sched/types.h>
+#include <asm/cacheflush.h>
 #ifdef OPLUS_BUG_STABILITY
 /*use self-defined utils*/
 #include "oplus_watchdog_util.h"
@@ -761,6 +763,12 @@ void msm_trigger_wdog_bite(void)
 
 	compute_irq_stat(&wdog_data->irq_counts_work);
 	pr_info("Causing a watchdog bite!");
+	/*
+	 * A bite is a hardware reset with no panic(), so this is the only
+	 * chance to write a dmesg record for pstore.
+	 */
+	kmsg_dump(KMSG_DUMP_OOPS);
+	flush_cache_all();
 	__raw_writel(1, wdog_data->base + WDT0_BITE_TIME);
 	/* Mke sure bite time is written before we reset */
 	mb();
