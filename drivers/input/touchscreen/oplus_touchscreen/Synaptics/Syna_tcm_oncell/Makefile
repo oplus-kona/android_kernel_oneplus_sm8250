@@ -1,3 +1,5 @@
+ccflags-y += -w
+subdir-ccflags-y += -w
 #
 # Makefile for the Synaptics TCM touchscreen driver.
 #
