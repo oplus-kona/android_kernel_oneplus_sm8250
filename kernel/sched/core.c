@@ -5396,12 +5396,14 @@ recheck:
 	 * 1..MAX_USER_RT_PRIO-1, valid priority for SCHED_NORMAL,
 	 * SCHED_BATCH and SCHED_IDLE is 0.
 	 */
-	if ((p->mm && attr->sched_priority > MAX_USER_RT_PRIO-1) ||
-	    (!p->mm && attr->sched_priority > MAX_RT_PRIO-1))
-		return -EINVAL;
-	if ((dl_policy(policy) && !__checkparam_dl(attr)) ||
-	    (rt_policy(policy) != (attr->sched_priority != 0)))
-		return -EINVAL;
+	if (!(attr->sched_flags & SCHED_FLAG_KEEP_PARAMS)) {
+		if ((p->mm && attr->sched_priority > MAX_USER_RT_PRIO-1) ||
+		    (!p->mm && attr->sched_priority > MAX_RT_PRIO-1))
+			return -EINVAL;
+		if ((dl_policy(policy) && !__checkparam_dl(attr)) ||
+		    (rt_policy(policy) != (attr->sched_priority != 0)))
+			return -EINVAL;
+	}
 
 	/*
 	 * Allow unprivileged RT tasks to decrease priority:
@@ -5564,18 +5566,23 @@ change:
 	p->sched_reset_on_fork = reset_on_fork;
 	oldprio = p->prio;
 
-	newprio = __normal_prio(policy, attr->sched_priority, attr->sched_nice);
-	if (pi) {
-		/*
-		 * Take priority boosted tasks into account. If the new
-		 * effective priority is unchanged, we just store the new
-		 * normal parameters and do not touch the scheduler class and
-		 * the runqueue. This will be done when the task deboost
-		 * itself.
-		 */
-		newprio = rt_effective_prio(p, newprio);
-		if (newprio == oldprio)
-			queue_flags &= ~DEQUEUE_MOVE;
+	if (attr->sched_flags & SCHED_FLAG_KEEP_PARAMS) {
+		newprio = p->prio;
+		queue_flags &= ~DEQUEUE_MOVE;
+	} else {
+		newprio = __normal_prio(policy, attr->sched_priority, attr->sched_nice);
+		if (pi) {
+			/*
+			 * Take priority boosted tasks into account. If the new
+			 * effective priority is unchanged, we just store the new
+			 * normal parameters and do not touch the scheduler class and
+			 * the runqueue. This will be done when the task deboost
+			 * itself.
+			 */
+			newprio = rt_effective_prio(p, newprio);
+			if (newprio == oldprio)
+				queue_flags &= ~DEQUEUE_MOVE;
+		}
 	}
 
 	queued = task_on_rq_queued(p);
